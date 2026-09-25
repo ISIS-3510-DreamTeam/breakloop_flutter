@@ -4,9 +4,9 @@ import '../model/auth_failure.dart';
 
 enum ResetStatus  { idle, loading, success, error }
 
-class PasswordResetViewmodel extends ChangeNotifier {
+class PasswordResetViewModel extends ChangeNotifier {
   final AuthRepository _repository;
-  PasswordResetViewmodel(this._repository);
+  PasswordResetViewModel(this._repository);
 
   ResetStatus  status = ResetStatus .idle;
   AuthFailure? failure;

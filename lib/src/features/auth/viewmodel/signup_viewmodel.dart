@@ -23,7 +23,7 @@ class SignupViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _repository.signIn(email, password);
+      await _repository.signUp(email, password);
       status = SignupStatus.idle;
 
     } on AuthFailure catch (e) {
