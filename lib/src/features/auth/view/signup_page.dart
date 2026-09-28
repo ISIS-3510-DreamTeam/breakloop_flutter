@@ -46,13 +46,13 @@ class _SignupPageState extends State<SignupPage> {
             vm.status == SignupStatus.loading
                 ? const CircularProgressIndicator()
                 : ElevatedButton(
-              onPressed: () => context.read<SignupViewModel>().signUp(
-                _emailController.text.trim(),
-                _passwordController.text.trim(),
-                _confirmPasswordController.text.trim(),
-              ),
-              child: const Text('Register'),
-            ),
+                  onPressed: () => context.read<SignupViewModel>().signUp(
+                    _emailController.text.trim(),
+                    _passwordController.text.trim(),
+                    _confirmPasswordController.text.trim(),
+                    ),
+                  child: const Text('Register'),
+                  ),
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Already have an account?'),

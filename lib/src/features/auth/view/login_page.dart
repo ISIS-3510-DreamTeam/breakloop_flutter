@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
+
 import '../viewmodel/login_viewmodel.dart';
-import 'signup_page.dart';
-import 'password_reset_page.dart';
+
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -40,12 +41,12 @@ class _LoginPageState extends State<LoginPage> {
                   child: const Text('Enter'),
                 ),
               TextButton(
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SignupPage())),
+                  onPressed: () => context.push('/signup'),
                   child: const Text("Don't have an account already? Sign Up"),
               ),
 
               TextButton(
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PasswordResetPage())),
+                onPressed: () => context.push('/password-reset'),
                 child: const Text("I forgot my password"),
 
               ),
