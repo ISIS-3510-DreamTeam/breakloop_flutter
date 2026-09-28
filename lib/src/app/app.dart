@@ -1,11 +1,7 @@
-
-//DEPRECATED
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'router.dart';
-
 
 import '../features/auth/data/auth_repository.dart';
 import '../features/auth/viewmodel/login_viewmodel.dart';
