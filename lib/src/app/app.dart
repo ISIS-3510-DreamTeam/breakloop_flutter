@@ -7,6 +7,9 @@ import '../features/auth/data/auth_repository.dart';
 import '../features/auth/viewmodel/login_viewmodel.dart';
 import '../features/auth/viewmodel/signup_viewmodel.dart';
 import '../features/auth/viewmodel/password_reset_viewmodel.dart';
+import '../features/screen_time_progress/data/screen_time_repository.dart';
+import '../features/screen_time_progress/data/mock_screen_time_repository.dart';
+import '../features/screen_time_progress/viewmodel/screen_time_progress_viewmodel.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -19,6 +22,9 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (ctx) => LoginViewModel(ctx.read<AuthRepository>())),
         ChangeNotifierProvider(create: (ctx) => SignupViewModel(ctx.read<AuthRepository>())),
         ChangeNotifierProvider(create: (ctx) => PasswordResetViewModel(ctx.read<AuthRepository>())),
+        //Screen-time data comes from mock data for now. Swap the implementation here once a real source exists.
+        Provider<ScreenTimeRepository>(create: (_) => MockScreenTimeRepository()),
+        ChangeNotifierProvider(create: (ctx) => ScreenTimeProgressViewModel(ctx.read<ScreenTimeRepository>())..load()),
       ],
       child: const _RouterApp(),
     );

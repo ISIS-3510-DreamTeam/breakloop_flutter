@@ -6,8 +6,10 @@ import '../features/auth/data/auth_repository.dart';
 import '../features/auth/view/login_page.dart';
 import '../features/auth/view/signup_page.dart';
 import '../features/auth/view/password_reset_page.dart';
+import '../features/screen_time_progress/view/screen_time_progress_page.dart';
 //Add here additional routes
 import '../core/navigation/home_placeholder_page.dart';
+import '../core/navigation/section_placeholder_page.dart';
 
 
 GoRouter buildRouter(AuthRepository authRepository) {
@@ -54,7 +56,20 @@ GoRouter buildRouter(AuthRepository authRepository) {
           branches: [
             StatefulShellBranch(routes: [
               GoRoute(path: '/home', builder: (_, _) => const HomePlaceholderPage()),
-            ])
+            ]),
+            //The order of the branches must match the order of the navBar destinations in MainShell
+            StatefulShellBranch(routes: [
+              GoRoute(path: '/focus', builder: (_, _) => const SectionPlaceholderPage(title: 'Focus')),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(path: '/stats', builder: (_, _) => const ScreenTimeProgressPage()),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(path: '/offline', builder: (_, _) => const SectionPlaceholderPage(title: 'Offline')),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(path: '/social', builder: (_, _) => const SectionPlaceholderPage(title: 'Social')),
+            ]),
 
             //add here all other branches accessed by the navBar
           ]
