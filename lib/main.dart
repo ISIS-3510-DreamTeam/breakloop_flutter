@@ -1,23 +1,13 @@
 import 'package:flutter/material.dart';
-import 'src/features/deep_stats/view/deep_stats_page.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'src/app/app.dart';
 
-void main() {
+Future<void>  main() async{
+  // Initialize Firebase before any widget tries to use it
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform,);
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'BreakLoop',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFC86D3B)),
-        useMaterial3: true,
-      ),
-      home: const DeepStatsPage(),
-    );
-  }
-}
