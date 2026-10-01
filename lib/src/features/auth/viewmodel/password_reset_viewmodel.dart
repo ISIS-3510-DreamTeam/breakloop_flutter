@@ -27,4 +27,10 @@ class PasswordResetViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void reset() {
+    status = ResetStatus.idle;
+    failure = null;
+    notifyListeners();
+  }
+
 }

@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'router.dart';
 
+import 'theme.dart';
+
 import '../features/auth/data/auth_repository.dart';
 import '../features/auth/viewmodel/login_viewmodel.dart';
 import '../features/auth/viewmodel/signup_viewmodel.dart';
@@ -64,8 +66,7 @@ class _RouterAppState extends State<_RouterApp> {
     return MaterialApp.router(
       routerConfig: _router,
       title: 'BreakLoop App',
-      //TODO: Configure the app theme
-      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.deepPurple)
+      theme: appTheme
     );
   }
 
