@@ -11,4 +11,5 @@ class AppColors {
 
   //hues
   static const inputFill = Color(0xFFFBE4DC);
+  static const headerBackground = Color(0xFFFDF2EC);
 }

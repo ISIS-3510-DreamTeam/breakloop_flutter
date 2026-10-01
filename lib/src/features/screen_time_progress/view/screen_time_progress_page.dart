@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../viewmodel/screen_time_progress_viewmodel.dart';
+
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_button.dart';
+import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/app_pill.dart';
 
 class ScreenTimeProgressPage extends StatefulWidget {
   const ScreenTimeProgressPage({super.key});
@@ -32,93 +38,247 @@ class _ScreenTimeProgressPageState extends State<ScreenTimeProgressPage> with Wi
     }
   }
 
-  //Palette colors for positive (reduction) and negative (increase) progress
-  static const _fern = Color(0xFF546A42);
-  static const _spicyPaprika = Color(0xFFC85A32);
+  //MOCK DATA: Focus and streak values. TODO: replace when Focus and streaks are implemented
+  static const _mockFocusMinutes = '75 min';
+  static const _mockFocusSprints = '3 completed sprints';
+  static const _mockCurrentStreak = '12 Days';
+  static const _mockCurrentStreakTarget = 'Under 4h target daily';
+  static const _mockBestStreak = '18 Days';
+  static const _mockBestStreakToBeat = '6 days to beat!';
 
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<ScreenTimeProgressViewModel>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Stats')),
-      body: _buildBody(context, vm),
+      backgroundColor: AppColors.snow,
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(child: _buildBody(vm)),
+        ],
+      ),
     );
   }
 
-  Widget _buildBody(BuildContext context, ScreenTimeProgressViewModel vm) {
+  Widget _buildHeader() {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: AppColors.headerBackground,
+        border: Border(bottom: BorderSide(color: AppColors.darkCoffee, width: 3)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset('assets/images/board_logo.png', width: 56, height: 56),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('BREAKLOOP', style: textTheme.titleLarge?.copyWith(color: AppColors.spicyPaprika, letterSpacing: 3)),
+                      Text('STATS', style: textTheme.labelLarge?.copyWith(fontSize: 14)),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              //Static chips until the shield test and streaks are implemented
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AppPill(label: '🛡 Shield Test'),
+                  SizedBox(width: 12),
+                  AppPill(label: '🔥 12d'),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody(ScreenTimeProgressViewModel vm) {
+    final textTheme = Theme.of(context).textTheme;
+
     switch (vm.status) {
       case ScreenTimeProgressStatus.idle:
       case ScreenTimeProgressStatus.loading:
-        return const Center(child: CircularProgressIndicator());
+        return const Center(child: CircularProgressIndicator(color: AppColors.spicyPaprika));
       case ScreenTimeProgressStatus.permissionRequired:
         return Center(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text(
+                Text(
                   'BreakLoop needs access to your app usage to measure your screen time. Please enable it in the settings and come back.',
                   textAlign: TextAlign.center,
+                  style: textTheme.bodyMedium,
                 ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: vm.requestPermission,
-                  child: const Text('Grant access'),
-                ),
+                const SizedBox(height: 20),
+                AppButton(label: 'GRANT ACCESS', onPressed: vm.requestPermission),
               ],
             ),
           ),
         );
       case ScreenTimeProgressStatus.error:
-        return const Center(child: Text('Oops, we could not load your screen time. Try again later.'));
+        return _buildMessage('Oops, we could not load your screen time. Try again later.');
       case ScreenTimeProgressStatus.loaded:
         break;
     }
 
     final currentWeek = vm.currentWeek;
     if (currentWeek == null) {
-      return const Center(child: Text('No screen-time data yet.'));
+      return _buildMessage('No screen-time data yet.');
     }
 
-    final textTheme = Theme.of(context).textTheme;
-
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
       children: [
-        Text('Your progress', style: textTheme.titleLarge),
-        const Text('Mindful reduction metrics vs baseline'),
-        const SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Weekly screen time'),
-                Text(_formatMinutes(currentWeek.averageDailyMinutes), style: textTheme.headlineMedium),
-                _buildReduction(vm),
-              ],
-            ),
+        _buildTitle(),
+        const SizedBox(height: 20),
+        _buildCardRow(
+          _buildStatCard(
+            label: 'Weekly screen time',
+            value: _formatMinutes(currentWeek.averageDailyMinutes),
+            footer: _buildReduction(vm),
+          ),
+          _buildStatCard(
+            label: 'Focus Minutes',
+            value: _mockFocusMinutes,
+            valueColor: AppColors.spicyPaprika,
+            footer: Text(_mockFocusSprints, style: _footerStyle()),
           ),
         ),
-        const SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Daily screen time this week', style: textTheme.titleMedium),
-                const SizedBox(height: 16),
-                _buildDailyBarChart(context, currentWeek.dailyMinutes),
-              ],
-            ),
+        const SizedBox(height: 12),
+        _buildCardRow(
+          _buildStatCard(
+            label: 'Current Streak',
+            value: _mockCurrentStreak,
+            footer: Text(_mockCurrentStreakTarget, style: _footerStyle()),
+          ),
+          _buildStatCard(
+            label: 'Best Streak Record',
+            value: _mockBestStreak,
+            valueColor: AppColors.spicyPaprika,
+            footer: Text(_mockBestStreakToBeat, style: _footerStyle().copyWith(color: AppColors.fern, fontWeight: FontWeight.bold)),
           ),
         ),
+        const SizedBox(height: 12),
+        AppCard(
+          color: Colors.white,
+          shadowOffset: const Offset(0, 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Daily screen time this week', style: _labelStyle()),
+              const SizedBox(height: 16),
+              _buildDailyBarChart(context, currentWeek.dailyMinutes),
+            ],
+          ),
+        ),
+        //TODO: Tamed distraction loops card
       ],
     );
+  }
+
+  Widget _buildMessage(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text(message, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium),
+      ),
+    );
+  }
+
+  Widget _buildTitle() {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('YOUR PROGRESS', style: textTheme.titleLarge),
+              const SizedBox(height: 4),
+              Text(
+                'Mindful reduction metrics vs baseline',
+                style: textTheme.bodyMedium?.copyWith(fontSize: 13, color: AppColors.spicyPaprika),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        AppPill(label: 'Deep Stats →', onTap: () => context.push('/stats/deep-stats')),
+      ],
+    );
+  }
+
+  //Two cards side by side with the same height
+  Widget _buildCardRow(Widget left, Widget right) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: left),
+          const SizedBox(width: 12),
+          Expanded(child: right),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required String label,
+    required String value,
+    required Widget footer,
+    Color valueColor = AppColors.darkCoffee,
+  }) {
+    return AppCard(
+      color: Colors.white,
+      shadowOffset: const Offset(0, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          //Label and number stay in one line and scale down on narrow screens instead of wrapping.
+          //softWrap false keeps IntrinsicHeight from measuring them as if they wrapped
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(label, softWrap: false, style: _labelStyle()),
+          ),
+          const SizedBox(height: 6),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(value, softWrap: false, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 26, color: valueColor)),
+          ),
+          const SizedBox(height: 4),
+          footer,
+        ],
+      ),
+    );
+  }
+
+  TextStyle? _labelStyle() {
+    return Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 13, letterSpacing: 0);
+  }
+
+  TextStyle _footerStyle() {
+    return Theme.of(context).textTheme.bodyMedium!.copyWith(fontSize: 12, fontWeight: FontWeight.w600);
   }
 
   //Vertical bar chart of the current week, one bar per day from Sunday to Saturday
@@ -158,7 +318,7 @@ class _ScreenTimeProgressPageState extends State<ScreenTimeProgressPage> with Wi
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(dayLabels[i]),
+                FittedBox(fit: BoxFit.scaleDown, child: Text(dayLabels[i])),
               ],
             ),
           ),
@@ -169,16 +329,27 @@ class _ScreenTimeProgressPageState extends State<ScreenTimeProgressPage> with Wi
   //Reduction against the fixed baseline (first week of use)
   Widget _buildReduction(ScreenTimeProgressViewModel vm) {
     final reduction = vm.reductionPercent;
+    final style = _footerStyle();
     if (vm.weeks.length == 1) {
-      return const Text('This is your baseline week');
+      return Text('This is your baseline week', style: style);
     }
     if (reduction == null) {
-      return const Text('No baseline to compare yet');
+      return Text('No baseline to compare yet', style: style);
     }
     if (reduction >= 0) {
-      return Text('${reduction.toStringAsFixed(1)}% less than your first week', style: const TextStyle(color: _fern));
+      return Text(
+        '${reduction.toStringAsFixed(1)}% less than your first week',
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: style.copyWith(color: AppColors.fern, fontWeight: FontWeight.bold),
+      );
     }
-    return Text('${(-reduction).toStringAsFixed(1)}% more than your first week', style: const TextStyle(color: _spicyPaprika));
+    return Text(
+      '${(-reduction).toStringAsFixed(1)}% more than your first week',
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: style.copyWith(color: AppColors.spicyPaprika, fontWeight: FontWeight.bold),
+    );
   }
 
   //Format minutes as "X h Y min"
