@@ -1,8 +1,9 @@
-// features/auth/view/password_reset_page.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import '../viewmodel/password_reset_viewmodel.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_card.dart';
@@ -27,36 +28,43 @@ class _PasswordResetPageState extends State<PasswordResetPage> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          child: Column(
+          child: Stack(
             children: [
               // Back button
-              Align(
-                alignment: Alignment.centerLeft,
+              Positioned(
+                left: 0,
+                top: 0,
                 child: IconButton(
                   icon: const Icon(Icons.arrow_back, color: AppColors.darkCoffee),
                   onPressed: () => context.pop(),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  visualDensity: VisualDensity.compact,
                 ),
               ),
+              Column(
+                children: [
+                  // Logo
+                  Image.asset('assets/images/logo_name.png', width: 240, height: 180, fit: BoxFit.contain),
+                  const SizedBox(height: 20),
 
-              // Logo
-              Image.asset('assets/images/logo_name.png', width: 240, height: 180, fit: BoxFit.contain),
-              const SizedBox(height: 20),
+                  // Title
+                  Text('RECOVER PASSWORD', style: textTheme.headlineMedium, textAlign: TextAlign.center),
+                  const SizedBox(height: 20),
 
-              // Title
-              Text('RECOVER PASSWORD', style: textTheme.headlineMedium, textAlign: TextAlign.center),
-              const SizedBox(height: 20),
-
-              // Card
-              AppCard(
-                padding: const EdgeInsets.all(20),
-                child: vm.status == ResetStatus.success
-                    ? _SuccessContent(textTheme: textTheme)
-                    : _FormContent(
-                  emailController: _emailController,
-                  vm: vm,
-                  textTheme: textTheme,
-                ),
-              ),
+                  // Card
+                  AppCard(
+                    padding: const EdgeInsets.all(20),
+                    child: vm.status == ResetStatus.success
+                        ? _SuccessContent(textTheme: textTheme)
+                        : _FormContent(
+                      emailController: _emailController,
+                      vm: vm,
+                      textTheme: textTheme,
+                    ),
+                  ),
+                ],
+              )
             ],
           ),
         ),
@@ -141,6 +149,15 @@ class _SuccessContent extends StatelessWidget {
           style: textTheme.bodyMedium?.copyWith(color: AppColors.darkCoffee.withValues(alpha: 0.7)),
           textAlign: TextAlign.center,
         ),
+        // Refresh the page on demand in case there was any error on the email input, otherwise it is preserved.
+        const SizedBox(height: 20),
+        GestureDetector(
+          onTap: () => context.read<PasswordResetViewModel>().reset(),
+          child: Text(
+            'Use a different e-mail',
+            style: textTheme.labelLarge?.copyWith(color: AppColors.spicyPaprika)
+          )
+        )
       ],
     );
   }

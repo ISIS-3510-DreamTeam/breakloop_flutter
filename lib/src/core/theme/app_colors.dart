@@ -1,4 +1,3 @@
-// core/theme/app_colors.dart
 import 'package:flutter/material.dart';
 
 class AppColors {
@@ -10,5 +9,6 @@ class AppColors {
   static const darkCoffee   = Color(0xFF3A2A22);
   static const snow         = Color(0xFFFFF8F6);
 
+  //hues
   static const inputFill = Color(0xFFFBE4DC);
 }
