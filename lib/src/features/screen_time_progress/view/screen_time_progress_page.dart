@@ -123,7 +123,7 @@ class _ScreenTimeProgressPageState extends State<ScreenTimeProgressPage> with Wi
 
   //Vertical bar chart of the current week, one bar per day from Sunday to Saturday
   Widget _buildDailyBarChart(BuildContext context, List<int?> dailyMinutes) {
-    const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const maxBarHeight = 120.0;
     final textTheme = Theme.of(context).textTheme;
     final barColor = Theme.of(context).colorScheme.primary;
