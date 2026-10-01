@@ -1,236 +1,261 @@
 import 'package:flutter/material.dart';
-import '../viewmodel/statistics_viewmodel.dart';
+import 'package:provider/provider.dart';
 
-class DeepStatsPage extends StatefulWidget {
+import '../viewmodel/statistics_viewmodel.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/app_pill.dart';
+
+class DeepStatsPage extends StatelessWidget {
   const DeepStatsPage({super.key});
 
   @override
-  State<DeepStatsPage> createState() => _DeepStatsPageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => StatisticsViewModel(),
+      child: const _DeepStatsViewContent(),
+    );
+  }
 }
 
-class _DeepStatsPageState extends State<DeepStatsPage> {
-  late final StatisticsViewModel _viewModel;
-
-  @override
-  void initState() {
-    super.initState();
-    _viewModel = StatisticsViewModel();
-  }
-
-  @override
-  void dispose() {
-    _viewModel.dispose();
-    super.dispose();
-  }
+class _DeepStatsViewContent extends StatelessWidget {
+  const _DeepStatsViewContent();
 
   @override
   Widget build(BuildContext context) {
-    const Color borderColor = Color(0xFF3D2314);
-    const Color cardBgColor = Color(0xFFFFFBF7);
+    final vm = context.watch<StatisticsViewModel>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF5EF),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leadingWidth: 100,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 12.0, top: 8.0, bottom: 8.0),
-          child: OutlinedButton(
-            style: OutlinedButton.styleFrom(
-              backgroundColor: cardBgColor,
-              side: const BorderSide(color: borderColor, width: 2),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: () => Navigator.maybePop(context),
-            child: const Text(
-              '← Back',
-              style: TextStyle(
-                color: borderColor,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-        title: const Text(
-          'Detailed Statistics',
-          style: TextStyle(
-            color: borderColor,
-            fontWeight: FontWeight.bold,
-            fontSize: 22,
-          ),
-        ),
-      ),
-      body: ListenableBuilder(
-        listenable: _viewModel,
-        builder: (context, _) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
+      backgroundColor: AppColors.snow,
+      body: Column(
+        children: [
+          _buildHeader(context),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16.0),
               children: [
-                // TARJETA 1: Mindful Unlock Intentionality
-                _buildRetroCard(
-                  borderColor: borderColor,
-                  bgColor: cardBgColor,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'MINDFUL UNLOCK INTENTIONALITY',
-                        style: TextStyle(
-                          color: Color(0xFFC86D3B),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Container(
-                            width: 70,
-                            height: 70,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: const Color(0xFFC86D3B),
-                                width: 4,
-                              ),
-                            ),
-                            child: const Center(
-                              child: Text(
-                                '84%',
-                                style: TextStyle(
-                                  color: Color(0xFFC86D3B),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const [
-                                Text(
-                                  '84% intentional unlocks',
-                                  style: TextStyle(
-                                    color: borderColor,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'Only 16% were impulsive reflex pick-ups.',
-                                  style: TextStyle(
-                                    color: Colors.black54,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
+                _buildSubHeader(context),
                 const SizedBox(height: 16),
-
-                // TARJETA 2: Daily Pickup Count
-                _buildRetroCard(
-                  borderColor: borderColor,
-                  bgColor: cardBgColor,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'DAILY PICKUP COUNT',
-                        style: TextStyle(
-                          color: Color(0xFFC86D3B),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          Text(
-                            '${_viewModel.dailyPickups}',
-                            style: const TextStyle(
-                              color: borderColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 42,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'pickups',
-                            style: TextStyle(
-                              color: borderColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 22,
-                            ),
-                          ),
-                          const Spacer(),
-                          const Text(
-                            '-18 vs baseline',
-                            style: TextStyle(
-                              color: Color(0xFF2A8B78),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Average interval between phone checks: ${_viewModel.avgIntervalMinutes} minutes.',
-                        style: const TextStyle(
-                          color: Colors.black54,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                _buildMindfulUnlockCard(context),
+                const SizedBox(height: 16),
+                _buildDailyPickupCard(context, vm),
               ],
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildRetroCard({
-    required Widget child,
-    required Color borderColor,
-    required Color bgColor,
-  }) {
+  /// Encabezado corporativo reutilizando los estilos y componentes del equipo
+  Widget _buildHeader(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
     return Container(
       width: double.infinity,
+      decoration: const BoxDecoration(
+        color: AppColors.headerBackground,
+        border: Border(bottom: BorderSide(color: AppColors.darkCoffee, width: 3)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset('assets/images/board_logo.png', width: 56, height: 56),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'BREAKLOOP',
+                        style: textTheme.titleLarge?.copyWith(
+                          color: AppColors.spicyPaprika,
+                          letterSpacing: 3,
+                        ),
+                      ),
+                      Text(
+                        'DEEP STATS',
+                        style: textTheme.labelLarge?.copyWith(fontSize: 14),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AppPill(label: '🛡 Shield Test'),
+                  SizedBox(width: 12),
+                  AppPill(label: '🔥 12d'),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Barra de navegación superior (Botón ← Back y Título)
+  Widget _buildSubHeader(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Row(
+      children: [
+        AppPill(
+          label: '← Back',
+          onTap: () => Navigator.maybePop(context),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          'Detailed Statistics',
+          style: textTheme.titleLarge?.copyWith(
+            color: AppColors.darkCoffee,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Tarjeta 1: Mindful Unlock Intentionality
+  Widget _buildMindfulUnlockCard(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return AppCard(
+      color: Colors.white,
+      shadowOffset: const Offset(0, 4),
       padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor, width: 2.5),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1A000000),
-            offset: Offset(0, 4),
-            blurRadius: 0,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'MINDFUL UNLOCK INTENTIONALITY',
+            style: textTheme.labelLarge?.copyWith(
+              color: AppColors.spicyPaprika,
+              fontSize: 12,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              // Círculo de porcentaje
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.spicyPaprika,
+                    width: 4,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    '84%',
+                    style: textTheme.headlineMedium?.copyWith(
+                      color: AppColors.spicyPaprika,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '84% intentional unlocks',
+                      style: textTheme.titleMedium?.copyWith(
+                        color: AppColors.darkCoffee,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Only 16% were impulsive reflex pick-ups.',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
-      child: child,
+    );
+  }
+
+  /// Tarjeta 2: Daily Pickup Count (Conectada al ViewModel)
+  Widget _buildDailyPickupCard(BuildContext context, StatisticsViewModel vm) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return AppCard(
+      color: Colors.white,
+      shadowOffset: const Offset(0, 4),
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'DAILY PICKUP COUNT',
+            style: textTheme.labelLarge?.copyWith(
+              color: AppColors.spicyPaprika,
+              fontSize: 12,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                '${vm.dailyPickups}',
+                style: textTheme.headlineLarge?.copyWith(
+                  color: AppColors.darkCoffee,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 42,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'pickups',
+                style: textTheme.titleLarge?.copyWith(
+                  color: AppColors.darkCoffee,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '-18 vs baseline',
+                style: textTheme.labelMedium?.copyWith(
+                  color: AppColors.fern,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Average interval between phone checks: ${vm.avgIntervalMinutes} minutes.',
+            style: textTheme.bodyMedium?.copyWith(
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
