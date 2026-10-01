@@ -9,7 +9,13 @@ import '../features/auth/viewmodel/signup_viewmodel.dart';
 import '../features/auth/viewmodel/password_reset_viewmodel.dart';
 import '../features/screen_time_progress/data/screen_time_repository.dart';
 import '../features/screen_time_progress/data/mock_screen_time_repository.dart';
+import '../features/screen_time_progress/data/usage_stats_screen_time_repository.dart';
 import '../features/screen_time_progress/viewmodel/screen_time_progress_viewmodel.dart';
+
+//Source of the screen-time data:
+//false -> mock data (works on any device or emulator)
+//true  -> real usage of the phone (asks the user for the PACKAGE_USAGE_STATS permission)
+const bool useRealScreenTime = true;
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -22,8 +28,14 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (ctx) => LoginViewModel(ctx.read<AuthRepository>())),
         ChangeNotifierProvider(create: (ctx) => SignupViewModel(ctx.read<AuthRepository>())),
         ChangeNotifierProvider(create: (ctx) => PasswordResetViewModel(ctx.read<AuthRepository>())),
-        //Screen-time data comes from mock data for now. Swap the implementation here once a real source exists.
-        Provider<ScreenTimeRepository>(create: (_) => MockScreenTimeRepository()),
+        //Screen-time source, chosen with useRealScreenTime
+        Provider<ScreenTimeRepository>(create: (_) {
+          if (useRealScreenTime) {
+            return UsageStatsScreenTimeRepository();
+          } else {
+            return MockScreenTimeRepository();
+          }
+        }),
         ChangeNotifierProvider(create: (ctx) => ScreenTimeProgressViewModel(ctx.read<ScreenTimeRepository>())..load()),
       ],
       child: const _RouterApp(),

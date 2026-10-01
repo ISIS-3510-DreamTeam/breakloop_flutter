@@ -3,7 +3,7 @@ import '../data/screen_time_repository.dart';
 import '../model/daily_screen_time.dart';
 import '../model/weekly_screen_time.dart';
 
-enum ScreenTimeProgressStatus { idle, loading, loaded, error }
+enum ScreenTimeProgressStatus { idle, loading, permissionRequired, loaded, error }
 
 class ScreenTimeProgressViewModel extends ChangeNotifier {
   final ScreenTimeRepository _repository;
@@ -41,6 +41,12 @@ class ScreenTimeProgressViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      if (!await _repository.hasPermission()) {
+        status = ScreenTimeProgressStatus.permissionRequired;
+        notifyListeners();
+        return;
+      }
+
       final records = await _repository.getDailyScreenTime();
       weeks = _groupByWeek(records);
       reductionPercent = _computeReduction();
@@ -50,6 +56,11 @@ class ScreenTimeProgressViewModel extends ChangeNotifier {
       status = ScreenTimeProgressStatus.error;
     }
     notifyListeners();
+  }
+
+  //Send the user to grant the permission. The view calls load() again when the user comes back to the app.
+  Future<void> requestPermission() async {
+    await _repository.requestPermission();
   }
 
   //Split the records into calendar weeks (Sunday to Saturday), counted from the week of the first day of use.

@@ -3,8 +3,34 @@ import 'package:provider/provider.dart';
 
 import '../viewmodel/screen_time_progress_viewmodel.dart';
 
-class ScreenTimeProgressPage extends StatelessWidget {
+class ScreenTimeProgressPage extends StatefulWidget {
   const ScreenTimeProgressPage({super.key});
+
+  @override
+  State<ScreenTimeProgressPage> createState() => _ScreenTimeProgressPageState();
+}
+
+class _ScreenTimeProgressPageState extends State<ScreenTimeProgressPage> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  //The user leaves the app to enable the usage access in the Android settings, so we check again when they come back
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final vm = context.read<ScreenTimeProgressViewModel>();
+    if (state == AppLifecycleState.resumed && vm.status == ScreenTimeProgressStatus.permissionRequired) {
+      vm.load();
+    }
+  }
 
   //Palette colors for positive (reduction) and negative (increase) progress
   static const _fern = Color(0xFF546A42);
@@ -25,6 +51,26 @@ class ScreenTimeProgressPage extends StatelessWidget {
       case ScreenTimeProgressStatus.idle:
       case ScreenTimeProgressStatus.loading:
         return const Center(child: CircularProgressIndicator());
+      case ScreenTimeProgressStatus.permissionRequired:
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  'BreakLoop needs access to your app usage to measure your screen time. Please enable it in the settings and come back.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: vm.requestPermission,
+                  child: const Text('Grant access'),
+                ),
+              ],
+            ),
+          ),
+        );
       case ScreenTimeProgressStatus.error:
         return const Center(child: Text('Oops, we could not load your screen time. Try again later.'));
       case ScreenTimeProgressStatus.loaded:
@@ -135,15 +181,23 @@ class ScreenTimeProgressPage extends StatelessWidget {
     return Text('${(-reduction).toStringAsFixed(1)}% more than your first week', style: const TextStyle(color: _spicyPaprika));
   }
 
-  //Format minutes as "5 h 30 min"
+  //Format minutes as "X h Y min"
   String _formatMinutes(double minutes) {
     final total = minutes.round();
-    return '${total ~/ 60} h ${(total % 60).toString().padLeft(2, '0')} min';
+    if (total < 60) {
+      return '$total min';
+    } else {
+      return '${total ~/ 60} h ${(total % 60).toString().padLeft(2, '0')} min';
+    }
   }
 
-  //Format minutes as "5h 30m" so it fits above a bar
+  //Format minutes as "X h Y m" so it fits above a bar.
   String _formatShortMinutes(int minutes) {
-    return '${minutes ~/ 60}h ${(minutes % 60).toString().padLeft(2, '0')}m';
+    if (minutes < 60) {
+      return '${minutes}m';
+    } else {
+      return '${minutes ~/ 60}h ${(minutes % 60).toString().padLeft(2, '0')}m';
+    }
   }
 
 }

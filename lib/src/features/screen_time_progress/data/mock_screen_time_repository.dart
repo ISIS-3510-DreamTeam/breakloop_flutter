@@ -12,6 +12,15 @@ class MockScreenTimeRepository implements ScreenTimeRepository {
   338, 268, 259, 281, 264, 289, 351, // Week 4
 ];
 
+  //The mock data needs no permission
+  @override
+  Future<bool> hasPermission() async {
+    return true;
+  }
+
+  @override
+  Future<void> requestPermission() async {}
+
   @override
   Future<List<DailyScreenTime>> getDailyScreenTime() async {
     final now = DateTime.now();

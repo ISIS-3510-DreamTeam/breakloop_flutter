@@ -1,4 +1,9 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- Lets the user grant access to the app usage data (enabled manually in the Android settings).
+         Used by the Screen-Time Reduction Progress feature to read the real screen time. -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions"/>
     <application
         android:label="breakloop_flutter"
         android:name="${applicationName}"
