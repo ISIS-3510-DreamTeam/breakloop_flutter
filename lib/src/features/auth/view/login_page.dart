@@ -34,11 +34,11 @@ class _LoginPageState extends State<LoginPage> {
             children: [
               // Logo
               Image.asset('assets/images/logo_name.png', width: 240, height: 180, fit: BoxFit.contain),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
               // Title
               Text('LOG IN', style: textTheme.headlineMedium),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
               // Form
               AppCard(
