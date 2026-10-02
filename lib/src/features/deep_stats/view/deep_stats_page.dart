@@ -36,7 +36,7 @@ class _DeepStatsViewContent extends StatelessWidget {
               children: [
                 _buildSubHeader(context),
                 const SizedBox(height: 16),
-                _buildMindfulUnlockCard(context),
+                _buildMindfulUnlockCard(context, vm),
                 const SizedBox(height: 16),
                 _buildDailyPickupCard(context, vm),
               ],
@@ -125,7 +125,7 @@ class _DeepStatsViewContent extends StatelessWidget {
   }
 
   /// Tarjeta 1: Mindful Unlock Intentionality
-  Widget _buildMindfulUnlockCard(BuildContext context) {
+  Widget _buildMindfulUnlockCard(BuildContext context, StatisticsViewModel vm) {
     final textTheme = Theme.of(context).textTheme;
 
     return AppCard(
@@ -159,7 +159,7 @@ class _DeepStatsViewContent extends StatelessWidget {
                 ),
                 child: Center(
                   child: Text(
-                    '84%',
+                    '${vm.mindfulPercentage}%',
                     style: textTheme.headlineMedium?.copyWith(
                       color: AppColors.spicyPaprika,
                       fontSize: 18,
@@ -174,7 +174,7 @@ class _DeepStatsViewContent extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '84% intentional unlocks',
+                      '${vm.mindfulPercentage}% intentional unlocks',
                       style: textTheme.titleMedium?.copyWith(
                         color: AppColors.darkCoffee,
                         fontWeight: FontWeight.bold,
@@ -182,7 +182,7 @@ class _DeepStatsViewContent extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Only 16% were impulsive reflex pick-ups.',
+                      'Only ${vm.impulsivePercentage}% were impulsive reflex pick-ups.',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 12,
                       ),
@@ -239,7 +239,7 @@ class _DeepStatsViewContent extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                '-18 vs baseline',
+                vm.baselineText,
                 style: textTheme.labelMedium?.copyWith(
                   color: AppColors.fern,
                   fontWeight: FontWeight.bold,
