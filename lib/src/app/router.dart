@@ -16,7 +16,7 @@ import '../features/context_aware/view/activity_detail_page.dart';
 //Add here additional routes
 import '../core/navigation/home_page.dart';
 import '../core/navigation/section_placeholder_page.dart';
-import '../core/navigation/home_placeholder_page.dart';
+//import '../core/navigation/home_placeholder_page.dart';
 
 
 GoRouter buildRouter(AuthRepository authRepository) {

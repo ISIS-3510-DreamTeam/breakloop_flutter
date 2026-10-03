@@ -30,6 +30,8 @@ class _HomePageState extends State<HomePage> {
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               GoalProgressCard(),
+              const SizedBox(height: 50),
+              Text("Pets and badges are coming soon")
             ],
           )
         ),
