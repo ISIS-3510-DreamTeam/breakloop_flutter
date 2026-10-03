@@ -5,7 +5,6 @@ import '../../features/auth/data/auth_repository.dart';
 
 import '../../features/goals/view/goal_progress_card.dart';
 
-//TODO: Important! Remove this file once the actual home is implemented
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 

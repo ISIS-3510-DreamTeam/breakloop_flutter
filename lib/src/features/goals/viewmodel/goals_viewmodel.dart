@@ -20,6 +20,9 @@ class GoalsViewModel extends ChangeNotifier {
   final GoalsRepository _goalsRepository;
   final ScreenTimeRepository _screenTimeRepository;
   Timer? _refreshTimer;
+  bool _isProcessingRollover = false;
+  //identifier to prevent race-conditions
+  int _usageRequestId = 0;
 
   GoalsViewModel(this._goalsRepository, this._screenTimeRepository){
     _subscribeToGoal();
@@ -33,6 +36,14 @@ class GoalsViewModel extends ChangeNotifier {
 
   void _subscribeToGoal() {
     _goalsRepository.watchGoal().listen((updatedGoal) async {
+
+      debugPrint('[GoalsViewModel] stream emitted → '
+          'dailyLimit=${updatedGoal.dailyLimitMinutes}, '
+          'pending=${updatedGoal.pendingDailyLimitMinutes}, '
+          'streak=${updatedGoal.currentStreak}, '
+          'lastEval=${updatedGoal.lastEvaluationDate}, '
+          'broken=${updatedGoal.streakBrokenToday}');
+
       goal = updatedGoal;
 
       if (!updatedGoal.isConfigured) {
@@ -41,46 +52,48 @@ class GoalsViewModel extends ChangeNotifier {
         return;
       }
 
-      await _handleDayRolloverIfNeeded(updatedGoal);
-      await _loadTodayUsage(updatedGoal.dailyLimitMinutes!);
+      await _refreshGoalState();
 
     });
   }
 
-  DateTime _dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
+  Future<void> _refreshGoalState() async {
+    await _handleDayRolloverIfNeeded(goal);
+    await _loadTodayUsage(goal.dailyLimitMinutes!);
+  }
+
+  Future<void> reloadUsage() async {
+    if (goal.isConfigured) await _refreshGoalState();
+  }
 
   Future<void> _handleDayRolloverIfNeeded(GoalModel currentGoal) async {
-    //this function only does something when it is a new day. For instance, at midnight.
-
+    //To prevent re-entries when a similar process is already running.
+    if (_isProcessingRollover) return;
     final today = _dateOnly(DateTime.now());
     final lastEval = currentGoal.lastEvaluationDate;
-    //We check if it is a new day
-    final isNewDay = lastEval==null || _dateOnly(lastEval) != today;
+    final isNewDay = lastEval == null || _dateOnly(lastEval) != today;
 
-    //If it is not a new day we do nothing.
     if (!isNewDay) return;
-    
-    int newStreak = currentGoal.currentStreak;
 
-    //if the streak has already started we update to the new value.
-    if (lastEval != null){
-      newStreak = currentGoal.streakBrokenToday ? 0 : currentGoal.currentStreak + 1;
-    }
+    _isProcessingRollover = true;
+    try {
+      int newStreak = currentGoal.currentStreak;
+      if (lastEval != null) {
+        newStreak = currentGoal.streakBrokenToday ? 0 : currentGoal.currentStreak + 1;
+      }
 
-    //if there is a new goal we set it up
-    if (currentGoal.pendingDailyLimitMinutes != null) {
-      await _goalsRepository.applyPendingLimitAndClear(currentGoal.pendingDailyLimitMinutes!);
-    }
-
-    await _goalsRepository.updateStreak(
-        newStreak: newStreak,
+      await _goalsRepository.applyDayRollover(
+        newDailyLimitMinutes: currentGoal.pendingDailyLimitMinutes,
+        currentStreak: newStreak,
         lastEvaluationDate: today,
-        //since we are starting a new day, the streak has not been broken yet.
-        streakBrokenToday: false,
-    );
+      );
+    } finally {
+      _isProcessingRollover = false;
+    }
   }
 
   Future<void> _loadTodayUsage(int goalMinutes) async {
+    final requestId = ++_usageRequestId;
     try {
       if (!await _screenTimeRepository.hasPermission()) {
         status = GoalsStatus.permissionRequired;
@@ -89,21 +102,34 @@ class GoalsViewModel extends ChangeNotifier {
       }
 
       final records = await _screenTimeRepository.getDailyScreenTime();
+
+      // A recent petition is already running, so we ignore this call to prevent overwriting.
+      if (requestId != _usageRequestId) {
+        debugPrint('[GoalsViewModel] discarding stale usage result (requestId=$requestId, current=$_usageRequestId)');
+        return;
+      }
+
       final usedToday = _findToday(records)?.minutes ?? 0;
 
       progress = DailyProgress(usedMinutes: usedToday, goalMinutes: goalMinutes);
       status = GoalsStatus.active;
 
+      debugPrint('[GoalsViewModel] usage loaded → used=$usedToday, goal=$goalMinutes, '
+          'isOverGoal=${progress!.isOverGoal}, alreadyBroken=${goal.streakBrokenToday}');
+
       //We check if the current time-screen violates the current objective, if it does we reset the streak. We only perform the change once.
       if (progress!.isOverGoal && !goal.streakBrokenToday) {
+        debugPrint('[GoalsViewModel] BREAKING STREAK NOW (over goal, not yet marked)');
         await _goalsRepository.updateStreak(
-            newStreak: 0,
-            lastEvaluationDate: goal.lastEvaluationDate ?? _dateOnly(DateTime.now()),
-            streakBrokenToday: true,
+          newStreak: 0,
+          lastEvaluationDate: goal.lastEvaluationDate ?? _dateOnly(DateTime.now()),
+          streakBrokenToday: true,
         );
       }
 
-    } catch (_) {
+    } catch (e) {
+      if (requestId != _usageRequestId) return;
+      debugPrint('[GoalsViewModel] ERROR loading usage: $e');
       status = GoalsStatus.error;
     }
     notifyListeners();
@@ -119,16 +145,17 @@ class GoalsViewModel extends ChangeNotifier {
     return null;
   }
 
+  DateTime _dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
+
   //In case permission has not been granted yet we also offer this function in this viewmodel.
   Future<void> requestPermission() => _screenTimeRepository.requestPermission();
 
-  Future<void> reloadUsage() async {
-    if (goal.isConfigured) await _loadTodayUsage(goal.dailyLimitMinutes!);
-  }
-
   Future<void> setDailyLimit(int minutes) => _goalsRepository.setDailyLimit(minutes);
 
-  Future<void> scheduleNewLimit(int minutes) => _goalsRepository.schedulePendingLimit(minutes);
+  Future<void> scheduleNewLimit(int minutes) {
+    debugPrint('[GoalsViewModel] scheduleNewLimit($minutes) called');
+    return _goalsRepository.schedulePendingLimit(minutes);
+  }
 
   @override
   void dispose() {
@@ -136,6 +163,4 @@ class GoalsViewModel extends ChangeNotifier {
     _goalsRepository.dispose();
     super.dispose();
   }
-
-
 }
