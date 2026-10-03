@@ -1,17 +1,19 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../features/auth/data/auth_repository.dart';
 
+import '../../features/goals/view/goal_progress_card.dart';
 
 //TODO: Important! Remove this file once the actual home is implemented
-class HomePlaceholderPage extends StatefulWidget {
-  const HomePlaceholderPage({super.key});
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
 
   @override
-  State<HomePlaceholderPage> createState() => _HomePlaceholderPageState();
+  State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePlaceholderPageState extends State<HomePlaceholderPage> {
+class _HomePageState extends State<HomePage> {
   int _counter = 0;
 
   void _incrementCounter() => setState(() => _counter++);
@@ -19,24 +21,21 @@ class _HomePlaceholderPageState extends State<HomePlaceholderPage> {
   @override
   Widget build(BuildContext context) {
     final currentUser = context.read<AuthRepository>().currentUser;
-    final email = currentUser?.email ?? 'User';
+    final String? email = currentUser?.email.toString();
+    final userName = email?.substring(0, email.indexOf('@')) ?? 'User';
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Home placeholder'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => context.read<AuthRepository>().signOut(),
-          ),
-        ],
+        title: Text('Welcome Back, $userName'),
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('Logged in as: $email'),
+            GoalProgressCard(),
+            Text('Logged in as: $userName'),
             const Text('You have pushed the button this many times:'),
             Text('$_counter', style: Theme.of(context).textTheme.headlineMedium),
+
           ],
         ),
       ),

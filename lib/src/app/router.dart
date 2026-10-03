@@ -9,7 +9,7 @@ import '../features/auth/view/password_reset_page.dart';
 import '../features/screen_time_progress/view/screen_time_progress_page.dart';
 import '../features/deep_stats/view/deep_stats_page.dart';
 //Add here additional routes
-import '../core/navigation/home_placeholder_page.dart';
+import '../core/navigation/home_page.dart';
 import '../core/navigation/section_placeholder_page.dart';
 
 
@@ -56,7 +56,7 @@ GoRouter buildRouter(AuthRepository authRepository) {
           builder: (context, state, navigationShell) => MainShell(navigationShell: navigationShell),
           branches: [
             StatefulShellBranch(routes: [
-              GoRoute(path: '/home', builder: (_, _) => const HomePlaceholderPage()),
+              GoRoute(path: '/home', builder: (_, _) => const HomePage()),
             ]),
             //The order of the branches must match the order of the navBar destinations in MainShell
             StatefulShellBranch(routes: [
