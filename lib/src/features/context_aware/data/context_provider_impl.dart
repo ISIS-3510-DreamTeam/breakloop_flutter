@@ -1,0 +1,32 @@
+import '../model/context_snapshot.dart';
+import '../model/part_of_day.dart';
+import 'activity_log_repository.dart';
+import 'context_provider.dart';
+import 'interests_data_source.dart';
+
+//Builds the current context from the clock, the available time, the user interests and the recent activities
+class ContextProviderImpl implements ContextProvider {
+  final InterestsDataSource _interestsDataSource;
+  final ActivityLogRepository _activityLogRepository;
+  final DateTime Function() _now;
+
+  ContextProviderImpl(
+    this._interestsDataSource,
+    this._activityLogRepository, {
+    DateTime Function()? now,
+  }) : _now = now ?? DateTime.now;
+
+  @override
+  Future<ContextSnapshot> getSnapshot(int availableMin) async {
+    final now = _now();
+    return ContextSnapshot(
+      partOfDay: PartOfDay.fromHour(now.hour),
+      //DateTime.weekday goes from Monday (1) to Sunday (7)
+      isWeekend: now.weekday > 5,
+      availableMin: availableMin,
+      weather: null, //TODO: connect the weather service (Open-Meteo)
+      interests: await _interestsDataSource.getInterests(),
+      recentActivityIds: await _activityLogRepository.getRecentActivityIds(3),
+    );
+  }
+}
