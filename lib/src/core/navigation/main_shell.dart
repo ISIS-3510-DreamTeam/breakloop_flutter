@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'app_header.dart';
 
 class MainShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
@@ -7,8 +8,21 @@ class MainShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const titles = [
+      'HOME',
+      'FOCUS',
+      'STATS',
+      'OFFLINE',
+      'SOCIAL',
+    ];
+
     return Scaffold(
-      body: navigationShell,
+      body: Column(
+        children: [
+          AppHeader(title: titles[navigationShell.currentIndex]),
+          Expanded(child: navigationShell)
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: (index) => navigationShell.goBranch(

@@ -54,55 +54,8 @@ class _ScreenTimeProgressPageState extends State<ScreenTimeProgressPage> with Wi
       backgroundColor: AppColors.snow,
       body: Column(
         children: [
-          _buildHeader(),
           Expanded(child: _buildBody(vm)),
         ],
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        color: AppColors.headerBackground,
-        border: Border(bottom: BorderSide(color: AppColors.darkCoffee, width: 3)),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset('assets/images/board_logo.png', width: 56, height: 56),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('BREAKLOOP', style: textTheme.titleLarge?.copyWith(color: AppColors.spicyPaprika, letterSpacing: 3)),
-                      Text('STATS', style: textTheme.labelLarge?.copyWith(fontSize: 14)),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              //Static chips until the shield test and streaks are implemented
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  AppPill(label: '🛡 Shield Test'),
-                  SizedBox(width: 12),
-                  AppPill(label: '🔥 12d'),
-                ],
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

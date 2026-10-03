@@ -29,7 +29,6 @@ class _DeepStatsViewContent extends StatelessWidget {
       backgroundColor: AppColors.snow,
       body: Column(
         children: [
-          _buildHeader(context),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(16.0),
@@ -43,61 +42,6 @@ class _DeepStatsViewContent extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  /// Encabezado corporativo reutilizando los estilos y componentes del equipo
-  Widget _buildHeader(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        color: AppColors.headerBackground,
-        border: Border(bottom: BorderSide(color: AppColors.darkCoffee, width: 3)),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset('assets/images/board_logo.png', width: 56, height: 56),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'BREAKLOOP',
-                        style: textTheme.titleLarge?.copyWith(
-                          color: AppColors.spicyPaprika,
-                          letterSpacing: 3,
-                        ),
-                      ),
-                      Text(
-                        'DEEP STATS',
-                        style: textTheme.labelLarge?.copyWith(fontSize: 14),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  AppPill(label: '🛡 Shield Test'),
-                  SizedBox(width: 12),
-                  AppPill(label: '🔥 12d'),
-                ],
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
