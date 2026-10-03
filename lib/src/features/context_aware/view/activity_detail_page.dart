@@ -10,6 +10,10 @@ import '../data/activity_log_repository_impl.dart';
 import '../data/activity_repository_impl.dart';
 import '../data/context_provider_impl.dart';
 import '../data/interests_data_source.dart';
+import '../data/location_data_source.dart';
+import '../data/permissions_data_source.dart';
+import '../data/weather_api.dart';
+import '../data/weather_repository_impl.dart';
 import '../model/activity_phase.dart';
 import '../viewmodel/activity_detail_ui_state.dart';
 import '../viewmodel/activity_detail_viewmodel.dart';
@@ -33,7 +37,11 @@ class ActivityDetailPage extends StatelessWidget {
           fromSuggestion,
           ActivityRepositoryImpl(ActivityCatalogDataSource()),
           activityLogRepository,
-          ContextProviderImpl(InterestsDataSource(), activityLogRepository),
+          ContextProviderImpl(
+            InterestsDataSource(),
+            activityLogRepository,
+            WeatherRepositoryImpl(LocationDataSource(PermissionsDataSource()), WeatherApi()),
+          ),
         );
       },
       child: const _ActivityDetailViewContent(),

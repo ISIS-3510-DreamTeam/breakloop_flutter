@@ -19,6 +19,8 @@ class OfflineContent extends OfflineUiState {
   final List<OfflineActivity> activities;
   //Null means "All"
   final ActivityCategory? selectedCategory;
+  //True while the app cannot use the location to check the weather
+  final bool needsLocationPermission;
 
   const OfflineContent({
     required this.suggestion,
@@ -26,5 +28,6 @@ class OfflineContent extends OfflineUiState {
     required this.isWeatherAvailable,
     required this.activities,
     required this.selectedCategory,
+    required this.needsLocationPermission,
   });
 }

@@ -9,11 +9,16 @@ import '../data/activity_log_repository_impl.dart';
 import '../data/activity_repository_impl.dart';
 import '../data/context_provider_impl.dart';
 import '../data/interests_data_source.dart';
+import '../data/location_data_source.dart';
+import '../data/permissions_data_source.dart';
+import '../data/weather_api.dart';
+import '../data/weather_repository_impl.dart';
 import '../model/recommend_activity_use_case.dart';
 import '../model/rules/default_scoring_rules.dart';
 import '../viewmodel/offline_ui_state.dart';
 import '../viewmodel/offline_viewmodel.dart';
 import 'activity_card.dart';
+import 'breakloop_chip.dart';
 import 'category_chips.dart';
 import 'offline_header.dart';
 import 'suggested_card.dart';
@@ -24,11 +29,19 @@ class OfflinePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => OfflineViewModel(
-        ActivityRepositoryImpl(ActivityCatalogDataSource()),
-        ContextProviderImpl(InterestsDataSource(), ActivityLogRepositoryImpl()),
-        const RecommendActivityUseCase(rules: DefaultScoringRules.all),
-      ),
+      create: (_) {
+        final permissionsDataSource = PermissionsDataSource();
+        return OfflineViewModel(
+          ActivityRepositoryImpl(ActivityCatalogDataSource()),
+          ContextProviderImpl(
+            InterestsDataSource(),
+            ActivityLogRepositoryImpl(),
+            WeatherRepositoryImpl(LocationDataSource(permissionsDataSource), WeatherApi()),
+          ),
+          const RecommendActivityUseCase(rules: DefaultScoringRules.all),
+          permissionsDataSource,
+        );
+      },
       child: const _OfflineViewContent(),
     );
   }
@@ -79,6 +92,10 @@ class _OfflineViewContent extends StatelessWidget {
             ],
           ),
         ),
+        if (state.needsLocationPermission) ...[
+          const SizedBox(height: 20),
+          _buildLocationPermissionCard(context, vm),
+        ],
         const SizedBox(height: 20),
         SuggestedCard(
           suggestion: state.suggestion,
@@ -106,6 +123,29 @@ class _OfflineViewContent extends StatelessWidget {
           const SizedBox(height: 14),
         ],
       ],
+    );
+  }
+
+  //Invites the user to share the approximate location, so the suggestions can consider the weather
+  Widget _buildLocationPermissionCard(BuildContext context, OfflineViewModel vm) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return AppCard(
+      color: Colors.white,
+      shadowOffset: const Offset(0, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Want weather-aware suggestions?', style: textTheme.labelLarge?.copyWith(fontSize: 14, letterSpacing: 0)),
+          const SizedBox(height: 4),
+          Text(
+            'We only use your approximate location to check the weather.',
+            style: textTheme.bodyMedium?.copyWith(fontSize: 13, color: AppColors.darkCoffee.withValues(alpha: 0.75)),
+          ),
+          const SizedBox(height: 12),
+          BreakLoopChip(label: 'Enable location', selected: true, onTap: vm.requestLocationPermission),
+        ],
+      ),
     );
   }
 
