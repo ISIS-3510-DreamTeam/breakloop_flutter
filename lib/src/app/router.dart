@@ -10,6 +10,8 @@ import '../features/screen_time_progress/view/screen_time_progress_page.dart';
 import '../features/deep_stats/view/deep_stats_page.dart';
 import '../features/focus_session/view/focus_session_view.dart';
 import '../features/focus_session/viewmodel/focus_viewmodel.dart';
+import '../features/context_aware/view/offline_page.dart';
+import '../features/context_aware/view/activity_detail_page.dart';
 
 //Add here additional routes
 import '../core/navigation/section_placeholder_page.dart';
@@ -78,7 +80,20 @@ GoRouter buildRouter(AuthRepository authRepository) {
               ),
             ]),
             StatefulShellBranch(routes: [
-              GoRoute(path: '/offline', builder: (_, _) => const SectionPlaceholderPage(title: 'Offline')),
+              GoRoute(
+                path: '/offline',
+                builder: (_, _) => const OfflinePage(),
+                //Child route, so Activity Detail keeps the navBar and the back button
+                routes: [
+                  GoRoute(
+                    path: 'activity/:id',
+                    builder: (_, state) => ActivityDetailPage(
+                      activityId: state.pathParameters['id']!,
+                      fromSuggestion: state.uri.queryParameters['fromSuggestion'] == 'true',
+                    ),
+                  ),
+                ],
+              ),
             ]),
             StatefulShellBranch(routes: [
               GoRoute(path: '/social', builder: (_, _) => const SectionPlaceholderPage(title: 'Social')),
