@@ -18,10 +18,9 @@ class AppHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final vm = context.watch<GoalsViewModel>();
 
-    //TODO: Properly implement streaks
-    final streak = vm.goal.currentStreak;
+    final goalsVm = context.watch<GoalsViewModel>();
+    final streak = goalsVm.goal.currentStreak;
 
     return Container(
       width: double.infinity,
@@ -53,12 +52,12 @@ class AppHeader extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   //Static chips until the shield test and streaks are implemented
-                  const Row(
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       AppPill(label: '🛡 Shield Test'),
                       SizedBox(width: 12),
-                      AppPill(label: '🔥 12d'),
+                      AppPill(label: '🔥 ${streak}d'),
                     ],
                   ),
                 ],
