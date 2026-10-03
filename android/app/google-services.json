@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "14746672383",
+    "project_id": "breakloop-dfcc6",
+    "storage_bucket": "breakloop-dfcc6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:14746672383:android:0339c3bdba1de09aa380ca",
+        "android_client_info": {
+          "package_name": "com.dreamteam.breakloop"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBVMk7cla8ffVjM5iegB9LYEsxlm9k6p9Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:14746672383:android:806a20a354dcccffa380ca",
+        "android_client_info": {
+          "package_name": "com.example.breakloop_flutter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBVMk7cla8ffVjM5iegB9LYEsxlm9k6p9Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
