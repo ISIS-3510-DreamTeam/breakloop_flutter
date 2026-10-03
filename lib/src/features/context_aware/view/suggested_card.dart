@@ -5,6 +5,7 @@ import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_card.dart';
 import '../model/reason_tag.dart';
 import '../model/recommendation.dart';
+import 'breakloop_chip.dart';
 
 //"Suggested for right now" card: best activity for the current context and the available time
 class SuggestedCard extends StatelessWidget {
@@ -60,11 +61,11 @@ class SuggestedCard extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 4),
             child: Row(
               children: [
-                _TimeChip(label: '5m quick', selected: availableMin == 5, onTap: () => onTimeSelected(5)),
+                BreakLoopChip(label: '5m quick', selected: availableMin == 5, onTap: () => onTimeSelected(5)),
                 const SizedBox(width: 8),
-                _TimeChip(label: '15m refresh', selected: availableMin == 15, onTap: () => onTimeSelected(15)),
+                BreakLoopChip(label: '15m refresh', selected: availableMin == 15, onTap: () => onTimeSelected(15)),
                 const SizedBox(width: 8),
-                _TimeChip(label: '30m deep', selected: availableMin == 30, onTap: () => onTimeSelected(30)),
+                BreakLoopChip(label: '30m deep', selected: availableMin == 30, onTap: () => onTimeSelected(30)),
               ],
             ),
           ),
@@ -118,38 +119,4 @@ String reasonText(List<ReasonTag> reasons, int availableMin) {
         return 'Matches your interests';
     }
   }).join(' · ');
-}
-
-class _TimeChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _TimeChip({required this.label, required this.selected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.spicyPaprika : AppColors.snow,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.darkCoffee, width: 2),
-          boxShadow: const [
-            BoxShadow(color: AppColors.darkCoffee, offset: Offset(0, 3), blurRadius: 0),
-          ],
-        ),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            fontSize: 12,
-            letterSpacing: 0,
-            color: selected ? AppColors.snow : AppColors.darkCoffee,
-          ),
-        ),
-      ),
-    );
-  }
 }
