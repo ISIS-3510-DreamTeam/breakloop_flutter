@@ -13,6 +13,8 @@ import '../features/screen_time_progress/data/screen_time_repository.dart';
 import '../features/screen_time_progress/data/mock_screen_time_repository.dart';
 import '../features/screen_time_progress/data/usage_stats_screen_time_repository.dart';
 import '../features/screen_time_progress/viewmodel/screen_time_progress_viewmodel.dart';
+import '../features/goals/data/goals_repository.dart';
+import '../features/goals/viewmodel/goals_viewmodel.dart';
 
 //Source of the screen-time data:
 //false -> mock data (works on any device or emulator)
@@ -39,6 +41,10 @@ class MyApp extends StatelessWidget {
           }
         }),
         ChangeNotifierProvider(create: (ctx) => ScreenTimeProgressViewModel(ctx.read<ScreenTimeRepository>())..load()),
+        Provider(create: (_) => GoalsRepository()),
+        ChangeNotifierProvider(
+          create: (ctx) => GoalsViewModel(ctx.read<GoalsRepository>(), ctx.read<ScreenTimeRepository>()),
+        ),
       ],
       child: const _RouterApp(),
     );

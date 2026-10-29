@@ -4,6 +4,10 @@
     <!-- Permiso para sensores de acelerómetro de alta frecuencia (Deep Stats) -->
     <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS"/>
 
+    <!-- Permisos para consultar el clima de las recomendaciones offline (ubicación aproximada y Open-Meteo) -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <!-- Permiso para estadísticas de uso de pantalla -->
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions"/>

@@ -6,6 +6,7 @@ class AppButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool loading;
   final IconData? icon;
+  final double height;
 
   const AppButton({
     super.key,
@@ -13,13 +14,14 @@ class AppButton extends StatelessWidget {
     required this.onPressed,
     this.loading = false,
     this.icon,
+    this.height = 52,
   });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 52,
+      height: height,
       child: ElevatedButton(
         onPressed: loading ? null : onPressed,
         style: ElevatedButton.styleFrom(
