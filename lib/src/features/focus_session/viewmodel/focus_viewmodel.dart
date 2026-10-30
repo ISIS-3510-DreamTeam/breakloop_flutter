@@ -209,20 +209,19 @@ class FocusViewModel extends ChangeNotifier {
       notifyListeners();
       return;
     }
-
     // Create the session model
-    final newSession = FocusSessionModel(
-      sessionId: sessionId,
-      userId: userId,
-      startedAt: startTime,
-      durationSeconds: _state.selectedDurationMinutes * 60,
-      sessionType: SessionType.pomodoro,
-      sessionStatus: status,
-      earnedXp: status == SessionStatus.completed
-          ? _state.selectedDurationMinutes * 2
-          : 0,
-      isSynced: false,
-    );
+        final newSession = FocusSessionModel(
+          id: sessionId,
+          userId: userId,
+          startTime: startTime, 
+          duration: _state.selectedDurationMinutes * 60, 
+          sessionType: SessionType.focus, 
+          sessionStatus: status,
+          xpEarned: status == SessionStatus.completed
+              ? _state.selectedDurationMinutes * 2
+              : 0,
+          isSynced: false,
+        );
 
     try {
       // Save the session locally
