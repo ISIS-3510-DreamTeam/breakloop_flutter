@@ -67,6 +67,7 @@ class _SetupView extends StatefulWidget {
 class _SetupViewState extends State<_SetupView> {
   final _controller = TextEditingController(text: '120');
 
+  //TODO: FIX visuals
   @override
   Widget build(BuildContext context) {
     return Column(
