@@ -17,6 +17,8 @@ class ActivityLogEntry {
   final String? weather;
   final int availableMin;
   final PlaceLabel? placeLabel;
+  //Suggestion interaction the log came from, or null
+  final String? interactionId;
   //False until the backend has the latest version of the log
   final bool synced;
 
@@ -32,6 +34,7 @@ class ActivityLogEntry {
     required this.weather,
     required this.availableMin,
     required this.placeLabel,
+    this.interactionId,
     this.synced = false,
   });
 
@@ -53,6 +56,7 @@ class ActivityLogEntry {
       weather: weather,
       availableMin: availableMin,
       placeLabel: placeLabel,
+      interactionId: interactionId,
       synced: synced ?? this.synced,
     );
   }
@@ -70,6 +74,7 @@ class ActivityLogEntry {
       'weather': weather,
       'availableMin': availableMin,
       'placeLabel': placeLabel?.name,
+      'interactionId': interactionId,
       'synced': synced,
     };
   }
@@ -90,6 +95,7 @@ class ActivityLogEntry {
       weather: json['weather'] as String?,
       availableMin: json['availableMin'] as int,
       placeLabel: placeLabel == null ? null : PlaceLabel.values.byName(placeLabel),
+      interactionId: json['interactionId'] as String?,
       synced: json['synced'] as bool? ?? false,
     );
   }
@@ -102,7 +108,7 @@ class ActivityLogEntry {
       'activityId': activityId,
       'category': category!.name.toUpperCase(),
       'source': source.name.toUpperCase(),
-      'interactionId': null,
+      'interactionId': interactionId,
       'startedAt': startedAt.millisecondsSinceEpoch,
       'completedAt': completedAt?.millisecondsSinceEpoch,
       'xp': xp,

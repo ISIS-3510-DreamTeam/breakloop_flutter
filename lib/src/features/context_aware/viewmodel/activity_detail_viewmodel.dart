@@ -6,6 +6,8 @@ import '../data/activity_log_repository.dart';
 import '../data/activity_repository.dart';
 import '../data/context_provider.dart';
 import '../data/place_data_source.dart';
+import '../data/suggestion_interaction_repository.dart';
+import '../model/suggestion_interaction.dart';
 import '../model/activity_category.dart';
 import '../model/activity_phase.dart';
 import '../model/activity_source.dart';
@@ -18,6 +20,8 @@ class ActivityDetailViewModel extends ChangeNotifier {
   final ActivityLogRepository _activityLogRepository;
   final ContextProvider _contextProvider;
   final PlaceDataSource _placeDataSource;
+  final SuggestionInteractionRepository _interactionRepository;
+  final String? _interactionId;
 
   ActivityDetailUiState uiState = const ActivityDetailLoading();
 
@@ -32,6 +36,8 @@ class ActivityDetailViewModel extends ChangeNotifier {
     this._activityLogRepository,
     this._contextProvider,
     this._placeDataSource,
+    this._interactionRepository,
+    this._interactionId,
   ) : _source = fromSuggestion ? ActivitySource.recommended : ActivitySource.browsed {
     _load();
   }
@@ -92,7 +98,19 @@ class ActivityDetailViewModel extends ChangeNotifier {
   Future<void> _saveStart(String activityId, ActivityCategory category, int durationMin) async {
     final snapshot = await _contextProvider.getSnapshot(durationMin);
     final place = await _placeDataSource.getPlace();
-    _logId = await _activityLogRepository.startLog(activityId, category, _source, snapshot, place);
+    _logId = await _activityLogRepository.startLog(activityId, category, _source, snapshot, place, _interactionId);
+
+    //Starting the activity closes the interaction of the Offline view (BQ12)
+    final interactionId = _interactionId;
+    if (interactionId != null) {
+      final accepted = _source == ActivitySource.recommended;
+      await _interactionRepository.closeInteraction(
+        interactionId,
+        outcome: accepted ? InteractionOutcome.accepted : InteractionOutcome.otherActivity,
+        acceptedActivityId: accepted ? activityId : null,
+        chosenActivityId: activityId,
+      );
+    }
   }
 
   void _complete(ActivityDetailContent current) {

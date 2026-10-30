@@ -28,6 +28,7 @@ class ActivityLogRepositoryImpl implements ActivityLogRepository {
     ActivitySource source,
     ContextSnapshot context,
     PlaceLabel? placeLabel,
+    String? interactionId,
   ) async {
     final now = DateTime.now();
     final id = now.microsecondsSinceEpoch.toString();
@@ -44,6 +45,7 @@ class ActivityLogRepositoryImpl implements ActivityLogRepository {
       weather: context.weather?.name,
       availableMin: context.availableMin,
       placeLabel: placeLabel,
+      interactionId: interactionId,
     ));
     await _writeLogs(logs);
     unawaited(syncActivityLogs());

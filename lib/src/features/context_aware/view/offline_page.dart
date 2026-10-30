@@ -12,6 +12,7 @@ import '../data/interests_data_source.dart';
 import '../data/location_data_source.dart';
 import '../data/permissions_data_source.dart';
 import '../data/place_data_source.dart';
+import '../data/suggestion_interaction_repository_impl.dart';
 import '../data/weather_api.dart';
 import '../data/weather_repository_impl.dart';
 import '../model/place_label.dart';
@@ -44,6 +45,7 @@ class OfflinePage extends StatelessWidget {
           permissionsDataSource,
           PlaceDataSource(),
           activityLogRepository,
+          SuggestionInteractionRepositoryImpl(),
         );
       },
       child: const _OfflineViewContent(),
@@ -103,7 +105,7 @@ class _OfflineViewContent extends StatelessWidget {
           suggestion: state.suggestion,
           availableMin: state.availableMin,
           isWeatherAvailable: state.isWeatherAvailable,
-          onActivityTap: (id) => _openActivity(context, id, fromSuggestion: true),
+          onActivityTap: (id) => _openActivity(context, vm, id, fromSuggestion: true),
         ),
         const SizedBox(height: 20),
         Text('OR EXPLORE ALL ACTIVITIES', style: textTheme.labelSmall?.copyWith(color: AppColors.neutral700)),
@@ -116,7 +118,7 @@ class _OfflineViewContent extends StatelessWidget {
           const SizedBox(height: 12),
           ActivityCard(
             activity: activity,
-            onTap: () => _openActivity(context, activity.id, fromSuggestion: false),
+            onTap: () => _openActivity(context, vm, activity.id, fromSuggestion: false),
           ),
         ],
       ],
@@ -176,7 +178,10 @@ class _OfflineViewContent extends StatelessWidget {
   }
 
   //Child route of /offline, so the detail keeps the navBar
-  void _openActivity(BuildContext context, String id, {required bool fromSuggestion}) {
-    context.push('/offline/activity/$id?fromSuggestion=$fromSuggestion');
+  //The interaction id lets the detail record what the user chose
+  void _openActivity(BuildContext context, OfflineViewModel vm, String id, {required bool fromSuggestion}) {
+    final interactionId = vm.interactionId;
+    final interactionParam = interactionId == null ? '' : '&interactionId=$interactionId';
+    context.push('/offline/activity/$id?fromSuggestion=$fromSuggestion$interactionParam');
   }
 }

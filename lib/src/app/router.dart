@@ -93,6 +93,7 @@ GoRouter buildRouter(AuthRepository authRepository) {
                     builder: (_, state) => ActivityDetailPage(
                       activityId: state.pathParameters['id']!,
                       fromSuggestion: state.uri.queryParameters['fromSuggestion'] == 'true',
+                      interactionId: state.uri.queryParameters['interactionId'],
                     ),
                   ),
                 ],

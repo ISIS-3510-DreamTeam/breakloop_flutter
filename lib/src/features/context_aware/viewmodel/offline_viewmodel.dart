@@ -8,6 +8,7 @@ import '../data/activity_repository.dart';
 import '../data/context_provider.dart';
 import '../data/permissions_data_source.dart';
 import '../data/place_data_source.dart';
+import '../data/suggestion_interaction_repository.dart';
 import '../model/activity_category.dart';
 import '../model/place_label.dart';
 import '../model/recommend_activity_use_case.dart';
@@ -20,6 +21,7 @@ class OfflineViewModel extends ChangeNotifier {
   final PermissionsDataSource _permissionsDataSource;
   final PlaceDataSource _placeDataSource;
   final ActivityLogRepository _activityLogRepository;
+  final SuggestionInteractionRepository _interactionRepository;
 
   OfflineUiState uiState = const OfflineLoading();
 
@@ -27,7 +29,11 @@ class OfflineViewModel extends ChangeNotifier {
   ActivityCategory? _selectedCategory;
   PlaceLabel? _selectedPlace;
 
-  //Sends the activity logs saved offline when the connection comes back
+  //One interaction per visit to the view (BQ12). It is a Future so two recomputes at the same time do not open two
+  Future<String>? _interactionId;
+  String? _openedInteractionId;
+
+  //Sends the activity logs and interactions saved offline when the connection comes back
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   //Increases on every recompute, so the result of an older recompute that finishes later is ignored
@@ -40,15 +46,18 @@ class OfflineViewModel extends ChangeNotifier {
     this._useCase,
     this._permissionsDataSource,
     this._placeDataSource,
-    this._activityLogRepository, {
+    this._activityLogRepository,
+    this._interactionRepository, {
     Connectivity? connectivity,
   }) {
     _connectivitySubscription = (connectivity ?? Connectivity()).onConnectivityChanged.listen((results) {
       if (!results.contains(ConnectivityResult.none)) {
         _activityLogRepository.syncActivityLogs();
+        _interactionRepository.syncUnsynced();
       }
     });
     _activityLogRepository.syncActivityLogs();
+    _interactionRepository.syncUnsynced();
     _loadPlace();
   }
 
@@ -74,7 +83,14 @@ class OfflineViewModel extends ChangeNotifier {
       notifyListeners();
     }
     await _placeDataSource.setPlace(place);
+    final interactionId = _openedInteractionId;
+    if (interactionId != null) {
+      await _interactionRepository.updatePlace(interactionId, place);
+    }
   }
+
+  //Id of the current interaction, passed to the activity detail so it can close it
+  String? get interactionId => _openedInteractionId;
 
   void onAvailableTimeSelected(int min) {
     _availableMin = min;
@@ -99,6 +115,13 @@ class OfflineViewModel extends ChangeNotifier {
     final snapshot = await _contextProvider.getSnapshot(_availableMin);
     final suggestion = _useCase.recommend(catalog, snapshot);
     final hasLocationAccess = await _permissionsDataSource.hasLocationAccess();
+
+    //Record which suggestion was shown, with the context and the place
+    final interactionId = await (_interactionId ??= _interactionRepository.openInteraction(snapshot, _selectedPlace));
+    _openedInteractionId = interactionId;
+    if (suggestion != null) {
+      await _interactionRepository.addShownSuggestion(interactionId, suggestion, _availableMin);
+    }
     final activities = _selectedCategory == null
         ? catalog
         : catalog.where((activity) {

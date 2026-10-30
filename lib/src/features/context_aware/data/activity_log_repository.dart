@@ -12,6 +12,7 @@ abstract interface class ActivityLogRepository {
     ActivitySource source,
     ContextSnapshot context,
     PlaceLabel? placeLabel,
+    String? interactionId,
   );
 
   Future<void> completeLog(String logId, int xp);

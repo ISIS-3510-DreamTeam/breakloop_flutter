@@ -14,6 +14,7 @@ import '../data/interests_data_source.dart';
 import '../data/location_data_source.dart';
 import '../data/permissions_data_source.dart';
 import '../data/place_data_source.dart';
+import '../data/suggestion_interaction_repository_impl.dart';
 import '../data/weather_api.dart';
 import '../data/weather_repository_impl.dart';
 import '../model/activity_phase.dart';
@@ -26,8 +27,10 @@ class ActivityDetailPage extends StatelessWidget {
   final String activityId;
   //True when the user opened the activity from the suggestion card
   final bool fromSuggestion;
+  //Interaction of the Offline view that opened the activity, or null
+  final String? interactionId;
 
-  const ActivityDetailPage({super.key, required this.activityId, required this.fromSuggestion});
+  const ActivityDetailPage({super.key, required this.activityId, required this.fromSuggestion, this.interactionId});
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +48,8 @@ class ActivityDetailPage extends StatelessWidget {
             WeatherRepositoryImpl(LocationDataSource(PermissionsDataSource()), WeatherApi()),
           ),
           PlaceDataSource(),
+          SuggestionInteractionRepositoryImpl(),
+          interactionId,
         );
       },
       child: const _ActivityDetailViewContent(),
