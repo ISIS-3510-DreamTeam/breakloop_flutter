@@ -6,15 +6,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../model/phone_pickup_model.dart';
 import 'phone_pickup_remote_datasource.dart';
 
-/// Repository responsible for local storage and Firebase synchronization.
+/// Repository responsible for local storage and Firebase synchronization via batches.
 class PhoneCheckRepository {
   static const String _keyPickups = 'phone_check_timestamps';
   static const String _keyPickupModels = 'phone_pickup_records';
 
   final PhonePickupRemoteDatasource _remoteDatasource;
   final FirebaseAuth _auth;
-
-  bool _isSyncing = false;
 
   PhoneCheckRepository({
     PhonePickupRemoteDatasource? remoteDatasource,
@@ -101,7 +99,6 @@ class PhoneCheckRepository {
     final records = await _getLocalRecords();
     if (records.isEmpty) return;
 
-    // Actualizamos el último elemento guardado con su valor real evaluado a los 5s
     final lastIndex = records.length - 1;
     records[lastIndex] = records[lastIndex].copyWith(
       isIntentional: isIntentional,
@@ -139,50 +136,9 @@ class PhoneCheckRepository {
     return records.where((record) => !record.isSynced).toList();
   }
 
-  /// Uploads pending records safely without race conditions.
+  /// Desactivado/Vacío para evitar que se suban pickups individuales a Firebase.
   Future<void> syncUnsyncedPickups() async {
-    if (_isSyncing) return;
-    final userId = _currentUserId;
-    if (userId == null || userId.isEmpty) return;
-
-    _isSyncing = true;
-
-    try {
-      final pendingRecords = await getUnsyncedPickups();
-      if (pendingRecords.isEmpty) return;
-
-      final records = await _getLocalRecords();
-      bool changesMade = false;
-
-      for (final pending in pendingRecords) {
-        if (pending.userId.isNotEmpty && pending.userId != userId) {
-          continue;
-        }
-
-        final pickup = pending.copyWith(userId: userId);
-
-        try {
-          await _remoteDatasource.savePickup(pickup);
-
-          final index = records.indexWhere(
-            (record) => record.pickupId == pickup.pickupId,
-          );
-
-          if (index != -1) {
-            records[index] = pickup.copyWith(isSynced: true);
-            changesMade = true;
-          }
-        } catch (_) {
-          continue;
-        }
-      }
-
-      if (changesMade) {
-        await _saveLocalRecords(records);
-      }
-    } finally {
-      _isSyncing = false;
-    }
+    // Ya no realiza llamadas a _remoteDatasource.savePickup(pickup)
   }
 
   Future<void> clearOldPickups() async {
@@ -230,6 +186,7 @@ class PhoneCheckRepository {
     };
 
     try {
+      // Envía únicamente el resumen y la lista encapsulada a la colección de lotes
       await _remoteDatasource.saveBatchSummary(userId, batchData);
 
       final records = await _getLocalRecords();
@@ -243,7 +200,7 @@ class PhoneCheckRepository {
 
       await _saveLocalRecords(records);
     } catch (_) {
-      // Si falla la red, se mantiene local para reintentar luego
+      // Si falla la red, se mantiene local para reintentar
     }
   }
 }

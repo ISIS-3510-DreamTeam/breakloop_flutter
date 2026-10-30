@@ -1,4 +1,3 @@
-
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -32,6 +31,10 @@ class StatisticsViewModel extends ChangeNotifier {
   int _mindfulPercentage = 0;
   int _impulsivePercentage = 0;
 
+  // Variables para el control de conectividad y banners dinámicos
+  bool _isOffline = false;
+  bool _showRestoredBanner = false;
+
   // Getters exposed to the View.
   int get dailyPickups => _dailyPickups;
   int get avgIntervalMinutes => _avgIntervalMinutes;
@@ -39,6 +42,10 @@ class StatisticsViewModel extends ChangeNotifier {
   bool get isListening => _isListening;
   int get mindfulPercentage => _mindfulPercentage;
   int get impulsivePercentage => _impulsivePercentage;
+  
+  // Getters de conectividad expuestos a la View
+  bool get isOffline => _isOffline;
+  bool get showRestoredBanner => _showRestoredBanner;
 
   // Creates the objects needed to get and process the data.
   StatisticsViewModel() {
@@ -53,7 +60,7 @@ class StatisticsViewModel extends ChangeNotifier {
     // Listen for pickup detections and statistics updates.
     _initListening();
 
-    // Retry synchronization when connectivity returns.
+    // Retry synchronization when connectivity returns and listen for network changes.
     _listenToConnectivity();
   }
 
@@ -97,7 +104,24 @@ class StatisticsViewModel extends ChangeNotifier {
         (result) => result != ConnectivityResult.none,
       );
 
-      if (hasConnection) {
+      if (!hasConnection) {
+        _isOffline = true;
+        _showRestoredBanner = false;
+        notifyListeners();
+      } else {
+        if (_isOffline) {
+          _isOffline = false;
+          _showRestoredBanner = true;
+          notifyListeners();
+
+          Future.delayed(const Duration(seconds: 3), () {
+            if (_disposed) return;
+            _showRestoredBanner = false;
+            notifyListeners();
+          });
+        }
+        
+        // Sincroniza pendientes al volver la red
         unawaited(_syncPendingPickups());
       }
     });
