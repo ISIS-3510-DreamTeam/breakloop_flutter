@@ -63,7 +63,11 @@ GoRouter buildRouter(AuthRepository authRepository) {
       GoRoute(path: '/password-reset', builder: (_, _) => const PasswordResetPage()),
 
       StatefulShellRoute.indexedStack(
-          builder: (context, state, navigationShell) => MainShell(navigationShell: navigationShell, focusViewModel: focusViewModel),
+          builder: (context, state, navigationShell) => MainShell(
+            navigationShell: navigationShell,
+            focusViewModel: focusViewModel,
+            location: state.uri.path,
+          ),
           branches: [
             StatefulShellBranch(routes: [
               GoRoute(path: '/home', builder: (_, _) => const HomePage()),
@@ -95,6 +99,7 @@ GoRouter buildRouter(AuthRepository authRepository) {
                     builder: (_, state) => ActivityDetailPage(
                       activityId: state.pathParameters['id']!,
                       fromSuggestion: state.uri.queryParameters['fromSuggestion'] == 'true',
+                      interactionId: state.uri.queryParameters['interactionId'],
                     ),
                   ),
                 ],

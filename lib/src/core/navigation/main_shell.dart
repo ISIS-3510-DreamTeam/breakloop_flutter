@@ -4,16 +4,20 @@ import 'package:go_router/go_router.dart';
 
 import '../theme/app_colors.dart';
 import 'app_header.dart';
+import '../../features/context_aware/view/active_activity_banner.dart';
 import 'package:breakloop_flutter/src/features/focus_session/viewmodel/focus_viewmodel.dart';
 
 class MainShell extends StatefulWidget {
   final StatefulNavigationShell navigationShell;
   final FocusViewModel focusViewModel;
+  //Current path, to hide the activity banner inside the activity itself
+  final String location;
 
   const MainShell({
     super.key,
     required this.navigationShell,
     required this.focusViewModel,
+    required this.location,
   });
 
   @override
@@ -63,6 +67,8 @@ Widget build(BuildContext context) {
       children: [
         // The title is the tab name, also inside child routes
         AppHeader(title: _tabs[widget.navigationShell.currentIndex].$1),
+        //Activity in progress, like the banner of the Kotlin app
+        if (!widget.location.startsWith('/offline/activity/')) const ActiveActivityBanner(),
         Expanded(child: widget.navigationShell),
       ],
     ),

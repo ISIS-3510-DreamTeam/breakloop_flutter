@@ -15,6 +15,11 @@ import '../features/screen_time_progress/data/usage_stats_screen_time_repository
 import '../features/screen_time_progress/viewmodel/screen_time_progress_viewmodel.dart';
 import '../features/goals/data/goals_repository.dart';
 import '../features/goals/viewmodel/goals_viewmodel.dart';
+import '../features/context_aware/data/activity_log_repository_impl.dart';
+import '../features/context_aware/viewmodel/avoided_screen_time_viewmodel.dart';
+import '../features/context_aware/viewmodel/active_activity_viewmodel.dart';
+import '../features/context_aware/data/activity_repository_impl.dart';
+import '../features/context_aware/data/activity_catalog_data_source.dart';
 
 //Source of the screen-time data:
 //false -> mock data (works on any device or emulator)
@@ -44,6 +49,12 @@ class MyApp extends StatelessWidget {
         Provider(create: (_) => GoalsRepository()),
         ChangeNotifierProvider(
           create: (ctx) => GoalsViewModel(ctx.read<GoalsRepository>(), ctx.read<ScreenTimeRepository>()),
+        ),
+        //Screen time avoided with the suggested activities (BQ6), shown in Stats
+        ChangeNotifierProvider(create: (_) => AvoidedScreenTimeViewModel(ActivityLogRepositoryImpl())),
+        //Activity in progress, shown in a banner under the header
+        ChangeNotifierProvider(
+          create: (_) => ActiveActivityViewModel(ActivityLogRepositoryImpl(), ActivityRepositoryImpl(ActivityCatalogDataSource())),
         ),
       ],
       child: const _RouterApp(),
