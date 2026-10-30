@@ -1,12 +1,49 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+
 import '../theme/app_colors.dart';
 import 'app_header.dart';
+import 'package:breakloop_flutter/src/features/focus_session/viewmodel/focus_viewmodel.dart';
 
-class MainShell extends StatelessWidget {
+class MainShell extends StatefulWidget {
   final StatefulNavigationShell navigationShell;
-  const MainShell({super.key, required this.navigationShell});
+  final FocusViewModel focusViewModel;
+
+  const MainShell({
+    super.key,
+    required this.navigationShell,
+    required this.focusViewModel,
+  });
+
+  @override
+  State<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends State<MainShell>
+    with WidgetsBindingObserver {
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  // Stops the sound when the app goes to the background
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      widget.focusViewModel.stopSoundscape();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
   //Label and pixel-art icon of each tab, in the same order as the router branches
   static const _tabs = [
@@ -17,42 +54,59 @@ class MainShell extends StatelessWidget {
     ('Friends', 'friends'),
   ];
 
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+ @override
+Widget build(BuildContext context) {
+  final textTheme = Theme.of(context).textTheme;
 
-    return Scaffold(
-      body: Column(
-        children: [
-          //The title is the tab name, also inside child routes like Deep Stats or Activity Detail
-          AppHeader(title: _tabs[navigationShell.currentIndex].$1),
-          Expanded(child: navigationShell)
-        ],
-      ),
-      bottomNavigationBar: NavigationBar(
-        backgroundColor: AppColors.navBackground,
-        indicatorColor: Colors.transparent,
-        selectedIndex: navigationShell.currentIndex,
-        //Selected label in golden orange
-        labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          final selected = states.contains(WidgetState.selected);
-          return textTheme.labelMedium?.copyWith(
-            color: selected ? AppColors.goldenOrange : AppColors.navUnselected,
-          );
-        }),
-        onDestinationSelected: (index) => navigationShell.goBranch(
+  return Scaffold(
+    body: Column(
+      children: [
+        // The title is the tab name, also inside child routes
+        AppHeader(title: _tabs[widget.navigationShell.currentIndex].$1),
+        Expanded(child: widget.navigationShell),
+      ],
+    ),
+    bottomNavigationBar: NavigationBar(
+      backgroundColor: AppColors.navBackground,
+      indicatorColor: Colors.transparent,
+      selectedIndex: widget.navigationShell.currentIndex,
+
+      // Selected label in golden orange
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        final selected = states.contains(WidgetState.selected);
+        return textTheme.labelMedium?.copyWith(
+          color: selected
+              ? AppColors.goldenOrange
+              : AppColors.navUnselected,
+        );
+      }),
+
+      onDestinationSelected: (index) {
+        // Stop the sound when leaving the Focus tab
+        if (widget.navigationShell.currentIndex == 1 && index != 1) {
+          widget.focusViewModel.stopSoundscape();
+        }
+
+        widget.navigationShell.goBranch(
           index,
-          initialLocation: index ==navigationShell.currentIndex,
-        ),
-        destinations: [
-          for (final (label, icon) in _tabs)
-            NavigationDestination(
-              icon: SvgPicture.asset('assets/icons/nav/$icon.svg', height: 24),
-              selectedIcon: SvgPicture.asset('assets/icons/nav/${icon}_selected.svg', height: 24),
-              label: label,
+          initialLocation: index == widget.navigationShell.currentIndex,
+        );
+      },
+
+      destinations: [
+        for (final (label, icon) in _tabs)
+          NavigationDestination(
+            icon: SvgPicture.asset(
+              'assets/icons/nav/$icon.svg',
+              height: 24,
             ),
-        ],
-      ),
-    );
-  }
-}
+            selectedIcon: SvgPicture.asset(
+              'assets/icons/nav/${icon}_selected.svg',
+              height: 24,
+            ),
+            label: label,
+          ),
+      ],
+    ),
+  );
+}}

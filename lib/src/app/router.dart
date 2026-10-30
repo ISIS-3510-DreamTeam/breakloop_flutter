@@ -23,6 +23,8 @@ import '../core/navigation/home_page.dart';
 
 GoRouter buildRouter(AuthRepository authRepository) {
   final authRefresh = GoRouterRefreshStream(authRepository.authStateChange);
+  final focusViewModel = FocusViewModel();
+
   const publicRoutes = ['/login', '/signup', '/password-reset'];
 
   return GoRouter(
@@ -61,14 +63,14 @@ GoRouter buildRouter(AuthRepository authRepository) {
       GoRoute(path: '/password-reset', builder: (_, _) => const PasswordResetPage()),
 
       StatefulShellRoute.indexedStack(
-          builder: (context, state, navigationShell) => MainShell(navigationShell: navigationShell),
+          builder: (context, state, navigationShell) => MainShell(navigationShell: navigationShell, focusViewModel: focusViewModel),
           branches: [
             StatefulShellBranch(routes: [
               GoRoute(path: '/home', builder: (_, _) => const HomePage()),
             ]),
             //The order of the branches must match the order of the navBar destinations in MainShell
             StatefulShellBranch(routes: [
-              GoRoute(path: '/focus', builder: (_, _) => FocusScreen(viewModel: FocusViewModel(),
+              GoRoute(path: '/focus', builder: (_, _) => FocusScreen(viewModel: focusViewModel,
     ),
   ),
 ]),

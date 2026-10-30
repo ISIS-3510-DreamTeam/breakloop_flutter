@@ -1,175 +1,134 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// Types of focus sessions available in the app
-enum SessionType { pomodoro, deepWork, shortBreak }
+// Tipo de sesión disponible en la app
+enum SessionType { focus }
 
-// Possible states of a focus session
-enum SessionStatus { completed, abandoned, inProgress }
+// Estados posibles de la sesión
+enum SessionStatus { completed, abandoned }
 
-/// Model that represents a focus session
+/// Modelo que representa una sesión de enfoque
 class FocusSessionModel {
-  final String sessionId;
+  final String id;
   final String userId;
-  final DateTime startedAt;
-  final int durationSeconds;
+  final DateTime startTime;
+  final int duration;
   final SessionType sessionType;
   final SessionStatus sessionStatus;
-  final int earnedXp;
+  final int xpEarned;
   final bool isSynced;
 
   FocusSessionModel({
-    required this.sessionId,
+    required this.id,
     required this.userId,
-    required this.startedAt,
-    required this.durationSeconds,
+    required this.startTime,
+    required this.duration,
     required this.sessionType,
     required this.sessionStatus,
-    required this.earnedXp,
+    required this.xpEarned,
     this.isSynced = false,
   });
 
-  /// Creates a FocusSessionModel from locally stored data
+  /// Crea un FocusSessionModel desde datos almacenados localmente
   factory FocusSessionModel.fromMap(Map<String, dynamic> map) {
     return FocusSessionModel(
-      // Get the session ID from the stored data.
-      sessionId: map['sessionId'] as String,
-
-      // Get the user ID or use an empty string if it is missing
+      id: map['id'] as String? ?? map['id'] as String? ?? '',
       userId: map['userId'] as String? ?? '',
-
-      // Convert the stored timestamp into a DateTime
-      startedAt: DateTime.fromMillisecondsSinceEpoch(
-        map['startedAt'] as int,
-      ),
-
-      // Get the duration of the session
-      durationSeconds: map['durationSeconds'] as int,
-
-      // Convert the stored text into a SessionType
+      startTime: map['startTime'] is int
+          ? DateTime.fromMillisecondsSinceEpoch(map['startTime'] as int)
+          : map['startTime'] is Timestamp
+              ? (map['startTime'] as Timestamp).toDate()
+              : DateTime.now(),
+      duration: (map['duration'] as num?)?.toInt() ?? 0,
       sessionType: SessionType.values.firstWhere(
-        (e) => e.name == map['sessionType'],
-        orElse: () => SessionType.pomodoro,
+        (e) => e.name.toUpperCase() == (map['type'] ?? map['sessionType']).toString().toUpperCase(),
+        orElse: () => SessionType.focus,
       ),
-
-      // Convert the stored text into a SessionStatus
       sessionStatus: SessionStatus.values.firstWhere(
-        (e) => e.name == map['sessionStatus'],
+        (e) => e.name.toUpperCase() == (map['status'] ?? map['sessionStatus']).toString().toUpperCase(),
         orElse: () => SessionStatus.completed,
       ),
-
-      // Get the XP earned during the session
-      earnedXp: map['earnedXp'] as int? ?? 0,
-
-      // Get the synchronization status.
+      xpEarned: (map['xpEarned'] as num?)?.toInt() ?? (map['earnedXp'] as num?)?.toInt() ?? 0,
       isSynced: map['isSynced'] as bool? ?? false,
     );
   }
 
-  // Converts the model into a Map for local storage
+  // Convierte el modelo a un Map para almacenamiento local
   Map<String, dynamic> toMap() {
     return {
-      'sessionId': sessionId,
+      'id': id,
       'userId': userId,
-
-      // Store the date as milliseconds because it is easier to save locally
-      'startedAt': startedAt.millisecondsSinceEpoch,
-
-      'durationSeconds': durationSeconds,
-      'sessionType': sessionType.name,
-      'sessionStatus': sessionStatus.name,
-      'earnedXp': earnedXp,
+      'startTime': startTime.millisecondsSinceEpoch,
+      'duration': duration,
+      'type': sessionType.name.toUpperCase(),
+      'status': sessionStatus.name.toUpperCase(),
+      'xpEarned': xpEarned,
       'isSynced': isSynced,
     };
   }
 
-  // Creates a FocusSessionModel from Firestore data
+  // Crea un FocusSessionModel desde datos de Firestore
   factory FocusSessionModel.fromFirestore(
       Map<String, dynamic> data, String docId) {
     DateTime parsedDate;
 
-    // Firestore normally stores dates as Timestamp.
-    if (data['startedAt'] is Timestamp) {
-      parsedDate = (data['startedAt'] as Timestamp).toDate();
-    }
-
-    // Also support timestamps stored as milliseconds
-    else if (data['startedAt'] is int) {
-      parsedDate = DateTime.fromMillisecondsSinceEpoch(
-        data['startedAt'] as int,
-      );
-    }
-
-    // uuse the current date if no valid date is available
-    else {
+    if (data['startTime'] is Timestamp) {
+      parsedDate = (data['startTime'] as Timestamp).toDate();
+    } else if (data['startTime'] is int) {
+      parsedDate = DateTime.fromMillisecondsSinceEpoch(data['startTime'] as int);
+    } else {
       parsedDate = DateTime.now();
     }
 
     return FocusSessionModel(
-      // The Firestore document ID is used as the session id
-      sessionId: docId,
-
+      id: docId,
       userId: data['userId'] as String? ?? '',
-      startedAt: parsedDate,
-
-      // Convert the value to int in case Firestore returns another number type
-      durationSeconds:
-          (data['durationSeconds'] as num?)?.toInt() ?? 0,
-
-      // Convert the stored text into a SessionType.
+      startTime: parsedDate,
+      duration: (data['duration'] as num?)?.toInt() ?? 0,
       sessionType: SessionType.values.firstWhere(
-        (e) => e.name == data['sessionType'],
-        orElse: () => SessionType.pomodoro,
+        (e) => e.name.toUpperCase() == (data['type'] ?? '').toString().toUpperCase(),
+        orElse: () => SessionType.focus,
       ),
-
-      // Convert the stored text into a SessionStatus
       sessionStatus: SessionStatus.values.firstWhere(
-        (e) => e.name == data['sessionStatus'],
+        (e) => e.name.toUpperCase() == (data['status'] ?? '').toString().toUpperCase(),
         orElse: () => SessionStatus.completed,
       ),
-
-      earnedXp: (data['earnedXp'] as num?)?.toInt() ?? 0,
-
-      // Data coming from Firestore is already synchronized
+      xpEarned: (data['xpEarned'] as num?)?.toInt() ?? 0,
       isSynced: true,
     );
   }
 
-  // Converts the model into a format that can be sent to Firestore
+  // Convierte el modelo a un formato para enviar a Firestore
   Map<String, dynamic> toFirestore() {
     return {
-      'sessionId': sessionId,
+      'id': id,
       'userId': userId,
-
-      // Firestore uses Timestamp for dates.
-      'startedAt': Timestamp.fromDate(startedAt),
-
-      'durationSeconds': durationSeconds,
-      'sessionType': sessionType.name,
-      'sessionStatus': sessionStatus.name,
-      'earnedXp': earnedXp,
+      'startTime': Timestamp.fromDate(startTime),
+      'duration': duration,
+      'type': sessionType.name.toUpperCase(),
+      'status': sessionStatus.name.toUpperCase(),
+      'xpEarned': xpEarned,
     };
   }
 
-  // Creates a new copy of the session with selected changes
+  // Crea una copia con los cambios seleccionados
   FocusSessionModel copyWith({
-    String? sessionId,
+    String? id,
     String? userId,
-    DateTime? startedAt,
-    int? durationSeconds,
+    DateTime? startTime,
+    int? duration,
     SessionType? sessionType,
     SessionStatus? sessionStatus,
-    int? earnedXp,
+    int? xpEarned,
     bool? isSynced,
   }) {
     return FocusSessionModel(
-      // Keep the old value if no new value was provided
-      sessionId: sessionId ?? this.sessionId,
+      id: id ?? this.id,
       userId: userId ?? this.userId,
-      startedAt: startedAt ?? this.startedAt,
-      durationSeconds: durationSeconds ?? this.durationSeconds,
+      startTime: startTime ?? this.startTime,
+      duration: duration ?? this.duration,
       sessionType: sessionType ?? this.sessionType,
       sessionStatus: sessionStatus ?? this.sessionStatus,
-      earnedXp: earnedXp ?? this.earnedXp,
+      xpEarned: xpEarned ?? this.xpEarned,
       isSynced: isSynced ?? this.isSynced,
     );
   }
