@@ -17,7 +17,7 @@ class PhoneCheckService {
   final double threshold;
 
   /// Baseline number of phone pickups used for comparison
-  static const int baselinePickups = 60;
+  static const int baselinePickups = 84;
 
   // Time of the last detected phone pickup.
   DateTime _lastDetectionTime = DateTime.now();
