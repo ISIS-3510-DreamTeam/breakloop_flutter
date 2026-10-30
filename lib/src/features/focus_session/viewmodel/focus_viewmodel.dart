@@ -209,20 +209,20 @@ class FocusViewModel extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    // Create the session model
-        final newSession = FocusSessionModel(
-          id: sessionId,
-          userId: userId,
-          startTime: startTime, 
-          duration: _state.selectedDurationMinutes * 60, 
-          sessionType: SessionType.focus, 
-          sessionStatus: status,
-          xpEarned: status == SessionStatus.completed
-              ? _state.selectedDurationMinutes * 2
-              : 0,
-          isSynced: false,
-        );
+    //  5 si se completa, 2 si se abandona (sale)
+    final int earnedXp = (status == SessionStatus.completed) ? 5 : 2;
 
+    // Create the session model
+    final newSession = FocusSessionModel(
+      id: sessionId,
+      userId: userId,
+      startTime: startTime, 
+      duration: _state.selectedDurationMinutes * 60, 
+      sessionType: SessionType.focus, 
+      sessionStatus: status,
+      xpEarned: earnedXp, // <--- Asignamos los puntos fijos según la regla
+      isSynced: false,
+    );
     try {
       // Save the session locally
       await _repository.saveSessionLocally(newSession);

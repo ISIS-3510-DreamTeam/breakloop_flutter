@@ -31,7 +31,7 @@ class FocusSessionModel {
   /// Crea un FocusSessionModel desde datos almacenados localmente
   factory FocusSessionModel.fromMap(Map<String, dynamic> map) {
     return FocusSessionModel(
-      id: map['id'] as String? ?? map['sessionId'] as String? ?? '',
+      id: map['id'] as String? ?? map['id'] as String? ?? '',
       userId: map['userId'] as String? ?? '',
       startTime: map['startTime'] is int
           ? DateTime.fromMillisecondsSinceEpoch(map['startTime'] as int)
