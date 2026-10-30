@@ -46,7 +46,6 @@ class FriendModel {
       uid: uid,
       displayName: profile['displayName'] as String? ?? '',
 
-      // Same defaults used by the Kotlin app when progress does not exist
       streak: (progress['streak'] as num?)?.toInt() ?? 0,
       petLevel: (progress['petLevel'] as num?)?.toInt() ?? 1,
     );

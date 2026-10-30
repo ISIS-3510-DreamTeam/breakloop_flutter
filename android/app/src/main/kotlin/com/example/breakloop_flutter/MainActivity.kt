@@ -5,11 +5,15 @@ import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.os.Process
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.io.ByteArrayOutputStream
 import java.util.Calendar
 
 class MainActivity : FlutterActivity() {
@@ -17,6 +21,8 @@ class MainActivity : FlutterActivity() {
     companion object {
         // Must match the channel name used by UsageStatsScreenTimeRepository in Dart
         private const val CHANNEL = "breakloop/usage_stats"
+        // Must match the channel name used by InstalledAppsDataSource in Dart
+        private const val APPS_CHANNEL = "breakloop/installed_apps"
         private const val HISTORY_PREFS = "screen_time_history"
         // Android only keeps a few days of usage events, so we ask for more than it can give
         private const val QUERY_DAYS = 30
@@ -60,6 +66,91 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, APPS_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getInstalledApps" -> runInBackground(result) { getInstalledApps() }
+                "getAppIcon" -> {
+                    val packageName = call.argument<String>("packageName")!!
+                    val sizePx = call.argument<Int>("sizePx")!!
+                    runInBackground(result) { getAppIcon(packageName, sizePx) }
+                }
+                "getTodayAppUsage" -> runInBackground(result) { getTodayAppUsage() }
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    // Querying the package manager and the usage events can be slow, so it runs outside the main thread
+    private fun runInBackground(result: MethodChannel.Result, work: () -> Any?) {
+        Thread {
+            try {
+                val value = work()
+                runOnUiThread { result.success(value) }
+            } catch (e: Exception) {
+                runOnUiThread { result.error("APPS_ERROR", e.message, null) }
+            }
+        }.start()
+    }
+
+    // Apps shown in the launcher, without BreakLoop itself (same as InstalledAppsDataSource in the Kotlin app)
+    private fun getInstalledApps(): List<Map<String, String>> {
+        val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        val apps = HashMap<String, String>()
+        for (info in packageManager.queryIntentActivities(launcherIntent, 0)) {
+            val appPackage = info.activityInfo.packageName
+            if (appPackage != packageName) {
+                apps[appPackage] = info.loadLabel(packageManager).toString()
+            }
+        }
+        return apps.map { (appPackage, label) -> mapOf("packageName" to appPackage, "label" to label) }
+    }
+
+    // Icon of an app as PNG bytes, or null if it cannot be loaded
+    private fun getAppIcon(appPackage: String, sizePx: Int): ByteArray? {
+        return try {
+            val drawable = packageManager.getApplicationIcon(appPackage)
+            val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            drawable.setBounds(0, 0, sizePx, sizePx)
+            drawable.draw(canvas)
+            val stream = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+            stream.toByteArray()
+        } catch (e: PackageManager.NameNotFoundException) {
+            null
+        }
+    }
+
+    // Milliseconds in the foreground of each app today (package -> ms). Empty without the usage permission
+    private fun getTodayAppUsage(): Map<String, Long> {
+        if (!hasUsagePermission()) {
+            return emptyMap()
+        }
+        val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val end = System.currentTimeMillis()
+        val begin = startOfDay(end).timeInMillis
+
+        val events = usageStatsManager.queryEvents(begin, end)
+        val event = UsageEvents.Event()
+        val resumedAt = HashMap<String, Long>()
+        val millisByPackage = HashMap<String, Long>()
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            val activity = "${event.packageName}/${event.className}"
+            when (event.eventType) {
+                UsageEvents.Event.ACTIVITY_RESUMED -> resumedAt[activity] = event.timeStamp
+                UsageEvents.Event.ACTIVITY_PAUSED -> resumedAt.remove(activity)?.let { start ->
+                    millisByPackage[event.packageName] = (millisByPackage[event.packageName] ?: 0L) + (event.timeStamp - start)
+                }
+            }
+        }
+        // The activity that is still in the foreground right now is counted up to now
+        resumedAt.maxByOrNull { it.value }?.let { (activity, start) ->
+            val appPackage = activity.substringBefore("/")
+            millisByPackage[appPackage] = (millisByPackage[appPackage] ?: 0L) + (end - start)
+        }
+        return millisByPackage
     }
 
     // Milliseconds with another app in the foreground between start and end, or null without the usage permission.

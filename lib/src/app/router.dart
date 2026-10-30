@@ -9,6 +9,7 @@ import '../features/auth/view/signup_page.dart';
 import '../features/auth/view/password_reset_page.dart';
 import '../features/screen_time_progress/view/screen_time_progress_page.dart';
 import '../features/deep_stats/view/deep_stats_page.dart';
+import '../features/flagged_apps/view/flagged_apps_page.dart';
 import '../features/focus_session/view/focus_session_view.dart';
 import '../features/focus_session/viewmodel/focus_viewmodel.dart';
 import '../features/context_aware/view/offline_page.dart';
@@ -85,6 +86,7 @@ GoRouter buildRouter(AuthRepository authRepository) {
                 //Child route, so Deep Stats keeps the navBar and the back button
                 routes: [
                   GoRoute(path: 'deep-stats', builder: (_, _) => const DeepStatsPage()),
+                  GoRoute(path: 'flagged-apps', builder: (_, _) => const FlaggedAppsPage()),
                 ],
               ),
             ]),
