@@ -1,4 +1,4 @@
-enum Soundscape { silence, rain, forest, waves, whiteNoise }
+enum Soundscape { silence, rain, fire}
 
 class FocusSessionUiState {
   /// Selected duration for the focus session

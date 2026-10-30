@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../viewmodel/focus_session_ui_state.dart';
 import '../viewmodel/focus_viewmodel.dart';
@@ -7,7 +8,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_card.dart';
 
 class FocusScreen extends StatefulWidget {
-  /// ViewModel that controls the focus session
   final FocusViewModel viewModel;
 
   const FocusScreen({
@@ -20,7 +20,6 @@ class FocusScreen extends StatefulWidget {
 }
 
 class _FocusScreenState extends State<FocusScreen> {
-  // controllers for the text fields
   final TextEditingController _goalController = TextEditingController();
   final TextEditingController _customDurationController =
       TextEditingController();
@@ -28,8 +27,6 @@ class _FocusScreenState extends State<FocusScreen> {
   @override
   void initState() {
     super.initState();
-
-    // Load the current values from the ViewModel
     _goalController.text = widget.viewModel.state.focusGoal;
     _customDurationController.text =
         widget.viewModel.state.customDurationMinutes.toString();
@@ -37,7 +34,6 @@ class _FocusScreenState extends State<FocusScreen> {
 
   @override
   void dispose() {
-    // Dispose the text controllers when the screen is removed
     _goalController.dispose();
     _customDurationController.dispose();
     super.dispose();
@@ -45,7 +41,6 @@ class _FocusScreenState extends State<FocusScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // rtebuild the screen when the ViewModel state changes
     return ListenableBuilder(
       listenable: widget.viewModel,
       builder: (context, _) {
@@ -56,7 +51,6 @@ class _FocusScreenState extends State<FocusScreen> {
           body: Column(
             children: [
               Expanded(
-                // Show the active session or the setup screen
                 child: state.isTimerRunning
                     ? ActiveFocusContent(
                         state: state,
@@ -76,12 +70,9 @@ class _FocusScreenState extends State<FocusScreen> {
       },
     );
   }
-
-  // Builds the header shown before starting a focus session
 }
 
 // Focus session setup screen
-
 class FocusSetupContent extends StatelessWidget {
   final FocusSessionUiState state;
   final TextEditingController goalController;
@@ -100,125 +91,219 @@ class FocusSetupContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
-    return ListView(
-      padding: const EdgeInsets.all(16.0),
-      children: [
-        // Introduction card
-        AppCard(
-          color: Colors.white,
-          padding: const EdgeInsets.symmetric(
-            vertical: 20,
-            horizontal: 16,
-          ),
-          child: Column(
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Banner dinámico de conectividad
+          if (viewModel.isOffline) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFDE8E4),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.spicyPaprika.withValues(alpha: 0.3)),
+              ),
+              child: Text(
+                'No internet connection',
+                textAlign: TextAlign.center,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: AppColors.spicyPaprika,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ] else if (viewModel.showRestoredBanner) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFDE8E4),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.spicyPaprika.withValues(alpha: 0.3)),
+              ),
+              child: Text(
+                'Internet connection restored',
+                textAlign: TextAlign.center,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: AppColors.spicyPaprika,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+
+          // Cabecera: Reloj a la izquierda y textos a la derecha
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   border: Border.all(
                     color: AppColors.darkCoffee,
                     width: 2,
                   ),
-                  borderRadius: BorderRadius.circular(16),
-                  color: AppColors.snow,
+                  borderRadius: BorderRadius.circular(18),
+                  color: Colors.white,
                 ),
-                child: Image.asset(
-                  'assets/images/hourglass.png',
-                  width: 35,
-                  height: 35,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Ready to Focus?',
-                style: textTheme.titleLarge?.copyWith(
-                  color: AppColors.darkCoffee,
-                  fontWeight: FontWeight.bold,
+                child: SvgPicture.asset(
+                  'assets/icons/nav/focus_selected.svg',
+                  width: 52,
+                  height: 52,
                 ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                'Select your duration and choose your commitment.',
-                textAlign: TextAlign.center,
-                style: textTheme.bodySmall?.copyWith(
-                  color: AppColors.darkCoffee,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ready to Focus?',
+                      style: textTheme.titleLarge?.copyWith(
+                        color: AppColors.darkCoffee,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Select your duration and choose your commitment.',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: AppColors.darkCoffee,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-        ),
 
-        const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
-        // Session duration
-        Text(
-          'SESSION LENGTH',
-          style: textTheme.labelLarge?.copyWith(
-            color: AppColors.darkCoffee,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.5,
+          // Session duration
+          Text(
+            'SESSION LENGTH',
+            style: textTheme.labelLarge?.copyWith(
+              color: AppColors.darkCoffee,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
+          const SizedBox(height: 8),
 
-        Row(
-          children: [
-            Expanded(
-              child: CustomDurationButton(
-                text: '25m',
-                selected: state.selectedDurationMinutes == 25 &&
-                    !state.isCustomSelected,
-                onTap: () => viewModel.updatePresetDuration(25),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: CustomDurationButton(
-                text: '45m',
-                selected: state.selectedDurationMinutes == 45 &&
-                    !state.isCustomSelected,
-                onTap: () => viewModel.updatePresetDuration(45),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: CustomDurationButton(
-                text: '60m',
-                selected: state.selectedDurationMinutes == 60 &&
-                    !state.isCustomSelected,
-                onTap: () => viewModel.updatePresetDuration(60),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: CustomDurationButton(
-                text: 'Custom',
-                selected: state.isCustomSelected,
-                onTap: () => viewModel.updateCustomDuration(
-                  int.tryParse(customDurationController.text) ?? 25,
+          Row(
+            children: [
+              Expanded(
+                child: CustomDurationButton(
+                  text: '25m',
+                  selected: state.selectedDurationMinutes == 25 &&
+                      !state.isCustomSelected,
+                  onTap: () => viewModel.updatePresetDuration(25),
                 ),
               ),
-            ),
-          ],
-        ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: CustomDurationButton(
+                  text: '45m',
+                  selected: state.selectedDurationMinutes == 45 &&
+                      !state.isCustomSelected,
+                  onTap: () => viewModel.updatePresetDuration(45),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: CustomDurationButton(
+                  text: '60m',
+                  selected: state.selectedDurationMinutes == 60 &&
+                      !state.isCustomSelected,
+                  onTap: () => viewModel.updatePresetDuration(60),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: CustomDurationButton(
+                  text: 'Custom',
+                  selected: state.isCustomSelected,
+                  onTap: () => viewModel.updateCustomDuration(
+                    int.tryParse(customDurationController.text) ?? 25,
+                  ),
+                ),
+              ),
+            ],
+          ),
 
-        // Show the custom duration field only when Custom is selected
-        if (state.isCustomSelected) ...[
-          const SizedBox(height: 12),
+          if (state.isCustomSelected) ...[
+            const SizedBox(height: 12),
+            TextField(
+              controller: customDurationController,
+              keyboardType: TextInputType.number,
+              style: textTheme.labelLarge?.copyWith(
+                color: AppColors.darkCoffee,
+                fontWeight: FontWeight.normal,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+              ],
+              decoration: InputDecoration(
+                labelText: 'Custom duration',
+                hintText: 'Enter minutes',
+                suffixText: 'min',
+                focusedBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(
+                    color: AppColors.spicyPaprika,
+                    width: 2,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onChanged: (value) {
+                final duration = int.tryParse(value);
+                if (duration != null) {
+                  viewModel.updateCustomDuration(duration);
+                } else if (value.isEmpty) {
+                  viewModel.updateCustomDuration(0);
+                }
+              },
+            ),
+            if (state.errorMessage != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                state.errorMessage!,
+                textAlign: TextAlign.center,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: AppColors.spicyPaprika,
+                ),
+              ),
+            ],
+          ],
+
+          const SizedBox(height: 20),
+
+          // --- NUEVA SECCIÓN: FOCUS GOAL (OPTIONAL) ---
+          Text(
+            'FOCUS GOAL (OPTIONAL)',
+            style: textTheme.labelLarge?.copyWith(
+              color: AppColors.darkCoffee,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 8),
           TextField(
-            controller: customDurationController,
-            keyboardType: TextInputType.number,
+            controller: goalController,
+            maxLength: 25, // Límite de 25 caracteres
             style: textTheme.labelLarge?.copyWith(
               color: AppColors.darkCoffee,
               fontWeight: FontWeight.normal,
             ),
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-            ],
             decoration: InputDecoration(
-              labelText: 'Custom duration',
-              hintText: 'Enter minutes',
-              suffixText: 'min',
+              hintText: 'e.g. Study Economics Reading',
+              counterText: '', // Oculta el contador numérico por defecto para mantenerlo limpio
               focusedBorder: OutlineInputBorder(
                 borderSide: const BorderSide(
                   color: AppColors.spicyPaprika,
@@ -229,265 +314,168 @@ class FocusSetupContent extends StatelessWidget {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
-            onChanged: (value) {
-              final duration = int.tryParse(value);
-
-              if (duration != null && duration > 0) {
-                viewModel.updateCustomDuration(duration);
-              }
-            },
+            onChanged: viewModel.setFocusGoal,
           ),
-        ],
 
-        const SizedBox(height: 20),
+          const SizedBox(height: 20),
 
-        // Optional focus goal
-        AppCard(
-          color: Colors.white,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'FOCUS GOAL (OPTIONAL)',
-                style: textTheme.labelLarge?.copyWith(
-                  color: AppColors.darkCoffee,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(
-                    color: AppColors.darkCoffee.withValues(alpha: 0.3),
-                    width: 1.5,
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    const Text(
-                      '🎯',
-                      style: TextStyle(fontSize: 18),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextField(
-                        controller: goalController,
-                        style: textTheme.labelLarge?.copyWith(
-                          color: AppColors.darkCoffee,
-                          fontWeight: FontWeight.normal,
-                        ),
-                        decoration: const InputDecoration(
-                          hintText: 'Study Economics Reading',
-                          border: InputBorder.none,
-                          isDense: true,
-                        ),
-                        onChanged: viewModel.setFocusGoal,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          // Soundscape options
+          Text(
+            'COZY SOUNDSCAPE',
+            style: textTheme.labelLarge?.copyWith(
+              color: AppColors.darkCoffee,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
           ),
-        ),
-
-        const SizedBox(height: 20),
-
-        // Soundscape options
-        AppCard(
-          color: Colors.white,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 8),
+          Row(
             children: [
-              Text(
-                'COZY SOUNDSCAPE',
-                style: textTheme.labelLarge?.copyWith(
-                  color: AppColors.darkCoffee,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: SoundOptionButton(
-                      emoji: '🔥',
-                      label: 'Hearth\nCrackle',
-                      selected:
-                          state.activeSoundscape == Soundscape.waves,
-                      onTap: () =>
-                          viewModel.selectSoundscape(Soundscape.waves),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SoundOptionButton(
-                      emoji: '🌧️',
-                      label: 'Soft Rain',
-                      selected:
-                          state.activeSoundscape == Soundscape.rain,
-                      onTap: () =>
-                          viewModel.selectSoundscape(Soundscape.rain),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SoundOptionButton(
-                      emoji: '🤫',
-                      label: 'Pure\nSilence',
-                      selected:
-                          state.activeSoundscape == Soundscape.silence,
-                      onTap: () =>
-                          viewModel.selectSoundscape(Soundscape.silence),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 20),
-
-        // App blocker option
-        AppCard(
-          color: Colors.white,
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              const Text(
-                '🛡️',
-                style: TextStyle(fontSize: 22),
-              ),
-              const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'App Shield Active',
-                      style: textTheme.titleMedium?.copyWith(
-                        color: AppColors.darkCoffee,
+                child: SoundOptionButton(
+                  label: 'Hearth\nCrackle',
+                  selected: state.activeSoundscape == Soundscape.fire,
+                  onTap: () => viewModel.selectSoundscape(Soundscape.fire),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SoundOptionButton(
+                  label: 'Soft\nRain',
+                  selected: state.activeSoundscape == Soundscape.rain,
+                  onTap: () => viewModel.selectSoundscape(Soundscape.rain),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SoundOptionButton(
+                  label: 'Pure\nSilence',
+                  selected: state.activeSoundscape == Soundscape.silence,
+                  onTap: () => viewModel.selectSoundscape(Soundscape.silence),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // App blocker option
+          AppCard(
+            color: Colors.white,
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Text(
+                  '🛡️',
+                  style: TextStyle(fontSize: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'App Shield Active',
+                        style: textTheme.titleMedium?.copyWith(
+                          color: AppColors.darkCoffee,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '10-second breath challenge on Instagram/TikTok',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: AppColors.darkCoffee.withValues(alpha: 0.7),
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: state.isAppBlockerActive
+                        ? const Color(0xFFE8F5E9)
+                        : Colors.grey.shade200,
+                    border: Border.all(
+                      color: state.isAppBlockerActive
+                          ? Colors.green
+                          : Colors.grey,
+                      width: 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: GestureDetector(
+                    onTap: () => viewModel.toggleAppBlocker(
+                      !state.isAppBlockerActive,
+                    ),
+                    child: Text(
+                      state.isAppBlockerActive ? 'ON' : 'OFF',
+                      style: textTheme.labelMedium?.copyWith(
+                        color: state.isAppBlockerActive
+                            ? Colors.green.shade800
+                            : Colors.black,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '10-second breath challenge on Instagram/TikTok',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: AppColors.darkCoffee.withValues(alpha: 0.7),
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: state.isAppBlockerActive
-                      ? const Color(0xFFE8F5E9)
-                      : Colors.grey.shade200,
-                  border: Border.all(
-                    color: state.isAppBlockerActive
-                        ? Colors.green
-                        : Colors.grey,
-                    width: 1.5,
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: GestureDetector(
-                  onTap: () => viewModel.toggleAppBlocker(
-                    !state.isAppBlockerActive,
-                  ),
-                  child: Text(
-                    state.isAppBlockerActive ? 'ON' : 'OFF',
-                    style: textTheme.labelMedium?.copyWith(
-                      color: state.isAppBlockerActive
-                          ? Colors.green.shade800
-                          : Colors.black,
-                      fontWeight: FontWeight.bold,
-                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 24),
-
-        // Show an error message if there is one
-        if (state.errorMessage != null) ...[
-          Text(
-            state.errorMessage!,
-            textAlign: TextAlign.center,
-            style: textTheme.bodyMedium?.copyWith(
-              color: Colors.red,
+              ],
             ),
           ),
-          const SizedBox(height: 12),
+
+          const SizedBox(height: 24),
+
+          // Start focus session button
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.spicyPaprika,
+              foregroundColor: Colors.white,
+              elevation: 4,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(
+                  color: AppColors.darkCoffee,
+                  width: 2,
+                ),
+              ),
+            ),
+            onPressed: viewModel.startFocusSession,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SvgPicture.asset(
+                  'assets/icons/nav/focus_selected.svg',
+                  width: 25,
+                  height: 25,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'START FOCUS',
+                  style: textTheme.labelLarge?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
         ],
-
-        // Start focus session button
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.spicyPaprika,
-            foregroundColor: Colors.white,
-            elevation: 4,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: const BorderSide(
-                color: AppColors.darkCoffee,
-                width: 2,
-              ),
-            ),
-          ),
-          onPressed: viewModel.startFocusSession,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(
-                'assets/images/hourglass.png',
-                width: 25,
-                height: 25,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'START FOCUS',
-                style: textTheme.labelLarge?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
 
-
 // Active focus session
-
-
 class ActiveFocusContent extends StatelessWidget {
   final FocusSessionUiState state;
   final VoidCallback onStopFocus;
@@ -502,14 +490,12 @@ class ActiveFocusContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
-    // Convert the remaining seconds into minutes and seconds
     final minutes = state.remainingSeconds ~/ 60;
     final seconds = state.remainingSeconds % 60;
 
     final timeText =
         '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
 
-    // Calculate the timer progress
     final totalSeconds = state.selectedDurationMinutes * 60;
     final progress = totalSeconds > 0
         ? (state.elapsedSeconds / totalSeconds).clamp(0.0, 1.0)
@@ -523,7 +509,6 @@ class ActiveFocusContent extends StatelessWidget {
         ),
         child: Column(
           children: [
-            // Top bar
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -570,7 +555,6 @@ class ActiveFocusContent extends StatelessWidget {
 
             const Spacer(),
 
-            // Main focus card
             Container(
               width: 170,
               height: 170,
@@ -585,8 +569,8 @@ class ActiveFocusContent extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Image.asset(
-                    'assets/images/hourglass.png',
+                  SvgPicture.asset(
+                    'assets/icons/nav/focus_selected.svg',
                     width: 55,
                     height: 55,
                   ),
@@ -613,7 +597,6 @@ class ActiveFocusContent extends StatelessWidget {
 
             const SizedBox(height: 28),
 
-            // Large timer
             Text(
               timeText,
               style: textTheme.displayLarge?.copyWith(
@@ -623,9 +606,6 @@ class ActiveFocusContent extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 12),
-
-            // Show the focus goal if the user entered one
             if (state.focusGoal.trim().isNotEmpty) ...[
               const SizedBox(height: 12),
               Container(
@@ -653,7 +633,6 @@ class ActiveFocusContent extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // Progress bar
             Container(
               width: 220,
               height: 16,
@@ -678,7 +657,6 @@ class ActiveFocusContent extends StatelessWidget {
 
             const Spacer(),
 
-            // End the session early
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.darkCoffee,
@@ -706,10 +684,7 @@ class ActiveFocusContent extends StatelessWidget {
   }
 }
 
-
 // Reusable UI components
-
-
 class CustomDurationButton extends StatelessWidget {
   final String text;
   final bool selected;
@@ -732,9 +707,7 @@ class CustomDurationButton extends StatelessWidget {
         height: 48,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected
-              ? AppColors.spicyPaprika
-              : Colors.white,
+          color: selected ? AppColors.spicyPaprika : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: AppColors.darkCoffee,
@@ -744,9 +717,7 @@ class CustomDurationButton extends StatelessWidget {
         child: Text(
           text,
           style: textTheme.labelLarge?.copyWith(
-            color: selected
-                ? Colors.white
-                : AppColors.darkCoffee,
+            color: selected ? Colors.white : AppColors.darkCoffee,
             fontWeight: FontWeight.normal,
           ),
         ),
@@ -756,14 +727,12 @@ class CustomDurationButton extends StatelessWidget {
 }
 
 class SoundOptionButton extends StatelessWidget {
-  final String emoji;
   final String label;
   final bool selected;
   final VoidCallback onTap;
 
   const SoundOptionButton({
     super.key,
-    required this.emoji,
     required this.label,
     required this.selected,
     required this.onTap,
@@ -776,14 +745,11 @@ class SoundOptionButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          vertical: 12,
-          horizontal: 8,
-        ),
+        height: 56,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
-          color: selected
-              ? AppColors.headerBackground
-              : Colors.white,
+          color: selected ? AppColors.headerBackground : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected
@@ -792,23 +758,15 @@ class SoundOptionButton extends StatelessWidget {
             width: selected ? 2 : 1.5,
           ),
         ),
-        child: Column(
-          children: [
-            Text(
-              emoji,
-              style: const TextStyle(fontSize: 20),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: textTheme.labelLarge?.copyWith(
-                color: AppColors.darkCoffee,
-                fontSize: 11,
-                fontWeight: FontWeight.normal,
-              ),
-            ),
-          ],
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: textTheme.labelLarge?.copyWith(
+            color: AppColors.darkCoffee,
+            fontSize: 11,
+            fontWeight: FontWeight.normal,
+            height: 1.2,
+          ),
         ),
       ),
     );

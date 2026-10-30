@@ -50,6 +50,19 @@ class MainActivity : FlutterActivity() {
                         }
                     }.start()
                 }
+                "getScreenTimeBetween" -> {
+                    val start = call.argument<Number>("start")!!.toLong()
+                    val end = call.argument<Number>("end")!!.toLong()
+                    // Same as getDailyUsage: the events are read outside the main thread
+                    Thread {
+                        try {
+                            val millis = getScreenTimeBetween(start, end)
+                            runOnUiThread { result.success(millis) }
+                        } catch (e: Exception) {
+                            runOnUiThread { result.error("USAGE_ERROR", e.message, null) }
+                        }
+                    }.start()
+                }
                 else -> result.notImplemented()
             }
         }
@@ -138,6 +151,39 @@ class MainActivity : FlutterActivity() {
             millisByPackage[appPackage] = (millisByPackage[appPackage] ?: 0L) + (end - start)
         }
         return millisByPackage
+    }
+
+    // Milliseconds with another app in the foreground between start and end, or null without the usage permission.
+    // BreakLoop itself is not counted, because the activity timer is shown in it
+    private fun getScreenTimeBetween(start: Long, end: Long): Long? {
+        if (!hasUsagePermission()) {
+            return null
+        }
+        val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        // Starts a bit earlier to know which app was already open when the window began
+        val events = usageStatsManager.queryEvents(start - 60 * 60 * 1000, end)
+        val event = UsageEvents.Event()
+        val resumedAt = HashMap<String, Long>()
+        var millis = 0L
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            if (event.packageName == packageName) continue
+            val activity = "${event.packageName}/${event.className}"
+            when (event.eventType) {
+                UsageEvents.Event.ACTIVITY_RESUMED -> resumedAt[activity] = event.timeStamp
+                UsageEvents.Event.ACTIVITY_PAUSED -> resumedAt.remove(activity)?.let { resumed ->
+                    millis += overlap(resumed, event.timeStamp, start, end)
+                }
+            }
+        }
+        // The app that is still in the foreground is counted up to the end of the window
+        resumedAt.values.maxOrNull()?.let { resumed -> millis += overlap(resumed, end, start, end) }
+        return millis
+    }
+
+    // Part of the session [from, to] that falls inside the window [start, end]
+    private fun overlap(from: Long, to: Long, start: Long, end: Long): Long {
+        return maxOf(0L, minOf(to, end) - maxOf(from, start))
     }
 
     @Suppress("DEPRECATION")
