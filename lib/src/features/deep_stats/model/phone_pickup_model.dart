@@ -6,10 +6,9 @@ class PhonePickupModel {
   final DateTime timestamp;
   final bool isSynced;
   
-  // Nuevos campos analíticos para Business Questions
-  final int hourOfDay;       // Hora (0-23) para analizar picos de uso compulsivo
-  final int dayOfWeek;       // Día de la semana (1-7) para comparar semana vs fin de semana
-  final bool isIntentional;  // Si fue un desbloqueo consciente o por impulso
+  final int hourOfDay;   
+  final int dayOfWeek;      
+  final bool isIntentional;  
 
   const PhonePickupModel({
     required this.pickupId,
