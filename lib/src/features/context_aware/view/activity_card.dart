@@ -19,7 +19,6 @@ class ActivityCard extends StatelessWidget {
       onTap: onTap,
       child: AppCard(
         color: Colors.white,
-        shadowOffset: const Offset(0, 4),
         child: Row(
           children: [
             Container(

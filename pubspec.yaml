@@ -44,6 +44,7 @@ dependencies:
   cloud_firestore: ^6.10.0
   geolocator: ^14.1.1
   http: ^1.6.0
+  flutter_svg: ^2.3.2
 
 dev_dependencies:
   flutter_test:
@@ -63,7 +64,7 @@ flutter_launcher_icons:
   android: true
   ios: false
   image_path: "assets/images/board_logo.png"
-  adaptative_icon_background: "#F5DDAA"
+  adaptive_icon_background: "#FFF8F6"
   adaptive_icon_foreground: "assets/icons/app_icon_foreground.png"
 # The following section is specific to Flutter packages.
 flutter:
@@ -77,6 +78,9 @@ flutter:
   assets:
     - assets/images/
     - assets/data/
+    - assets/icons/nav/
+    - assets/icons/shield.svg
+    - assets/icons/streak.svg
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

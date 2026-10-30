@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_text_styles.dart';
 
+//Round paprika button with a dark border and mono uppercase text
 class AppButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -14,7 +16,7 @@ class AppButton extends StatelessWidget {
     required this.onPressed,
     this.loading = false,
     this.icon,
-    this.height = 52,
+    this.height = 48,
   });
 
   @override
@@ -27,9 +29,9 @@ class AppButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.spicyPaprika,
           foregroundColor: AppColors.snow,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(26),
-            side: const BorderSide(color: AppColors.darkCoffee, width: 2.5),
+          disabledBackgroundColor: AppColors.spicyPaprika.withValues(alpha: 0.6),
+          shape: const StadiumBorder(
+            side: BorderSide(color: AppColors.darkCoffee, width: 2),
           ),
           elevation: 0,
         ),
@@ -42,7 +44,7 @@ class AppButton extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (icon != null) ...[Icon(icon, size: 18), const SizedBox(width: 8)],
-                Text(label, style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppColors.snow)),
+                Text(label.toUpperCase(), style: AppTextStyles.monoLabel.copyWith(color: AppColors.snow)),
             ],
           ),
       ),

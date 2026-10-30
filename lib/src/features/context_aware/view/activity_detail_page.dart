@@ -18,7 +18,6 @@ import '../model/activity_phase.dart';
 import '../viewmodel/activity_detail_ui_state.dart';
 import '../viewmodel/activity_detail_viewmodel.dart';
 import 'category_style.dart';
-import 'offline_header.dart';
 
 class ActivityDetailPage extends StatelessWidget {
   final String activityId;
@@ -60,7 +59,6 @@ class _ActivityDetailViewContent extends StatelessWidget {
       backgroundColor: AppColors.snow,
       body: Column(
         children: [
-          const OfflineHeader(section: 'ACTIVITY'),
           Expanded(
             child: switch (vm.uiState) {
               ActivityDetailLoading() => const Center(child: CircularProgressIndicator(color: AppColors.spicyPaprika)),
@@ -103,7 +101,6 @@ class _ActivityDetailViewContent extends StatelessWidget {
         const SizedBox(height: 16),
         AppCard(
           color: AppColors.headerBackground,
-          shadowOffset: const Offset(0, 4),
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
@@ -168,7 +165,6 @@ class _ActivityDetailViewContent extends StatelessWidget {
 
     return AppCard(
       color: Colors.white,
-      shadowOffset: const Offset(0, 4),
       child: Column(
         children: [
           Text(label, style: textTheme.bodyMedium?.copyWith(fontSize: 13, color: AppColors.darkCoffee.withValues(alpha: 0.8))),
@@ -194,7 +190,6 @@ class _ActivityDetailViewContent extends StatelessWidget {
         return [
           AppCard(
             color: Colors.white,
-            shadowOffset: const Offset(0, 4),
             child: SizedBox(
               width: double.infinity,
               child: Column(
@@ -219,7 +214,6 @@ class _ActivityDetailViewContent extends StatelessWidget {
         return [
           AppCard(
             color: Colors.white,
-            shadowOffset: const Offset(0, 4),
             child: SizedBox(
               width: double.infinity,
               child: Column(

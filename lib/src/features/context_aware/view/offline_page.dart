@@ -20,7 +20,6 @@ import '../viewmodel/offline_viewmodel.dart';
 import 'activity_card.dart';
 import 'breakloop_chip.dart';
 import 'category_chips.dart';
-import 'offline_header.dart';
 import 'suggested_card.dart';
 
 class OfflinePage extends StatelessWidget {
@@ -58,7 +57,6 @@ class _OfflineViewContent extends StatelessWidget {
       backgroundColor: AppColors.snow,
       body: Column(
         children: [
-          const OfflineHeader(section: 'OFFLINE'),
           Expanded(
             child: switch (vm.uiState) {
               OfflineLoading() => const Center(child: CircularProgressIndicator(color: AppColors.spicyPaprika)),
@@ -78,7 +76,6 @@ class _OfflineViewContent extends StatelessWidget {
       children: [
         AppCard(
           color: AppColors.headerBackground,
-          shadowOffset: const Offset(0, 4),
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,7 +129,6 @@ class _OfflineViewContent extends StatelessWidget {
 
     return AppCard(
       color: Colors.white,
-      shadowOffset: const Offset(0, 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

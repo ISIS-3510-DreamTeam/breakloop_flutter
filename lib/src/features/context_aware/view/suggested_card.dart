@@ -31,7 +31,6 @@ class SuggestedCard extends StatelessWidget {
 
     return AppCard(
       color: Colors.white,
-      shadowOffset: const Offset(0, 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
