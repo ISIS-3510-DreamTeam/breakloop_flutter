@@ -73,21 +73,29 @@ class FlaggedAppsRepository {
     await _afterChange();
   }
 
-  //Recalculates the time spent today in the flagged apps and saves it locally
+  //Recalculates today's screen time and the time spent in the flagged apps and saves them locally
   Future<void> refreshTodayFlaggedTime() async {
     final usage = await _installedAppsDataSource.getTodayAppUsage();
     //Without the usage permission there is nothing to measure
     if (usage.isEmpty) return;
 
+    //Like the Kotlin app, the screen time only counts the launcher apps
+    final included = {for (final app in await getInstalledApps()) app.packageName};
+    var screenTimeMs = 0;
+    usage.forEach((packageName, ms) {
+      if (included.contains(packageName)) screenTimeMs += ms;
+    });
     final flaggedTimeMs = _calculateFlaggedTime.getFlaggedAppTime(usage, await getFlaggedApps());
-    await _localDatasource.saveDailyFlaggedTime(_todayKey(), flaggedTimeMs);
-    debugPrint('[FlaggedAppsRepository] today flaggedTimeMs=$flaggedTimeMs');
+    await _localDatasource.saveDailyUsage(_todayKey(), screenTimeMs, flaggedTimeMs, DateTime.now().millisecondsSinceEpoch);
+    debugPrint('[FlaggedAppsRepository] today screenTimeMs=$screenTimeMs flaggedTimeMs=$flaggedTimeMs');
   }
 
-  //Sends to Firestore the changes that have not been synced. If it fails, they stay queued for the next try
+  //Sends the changes that have not been synced: the flagged apps to Firestore and the daily usage to the backend.
+  //If it fails, they stay queued for the next try
   Future<void> syncPending() async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) return;
+    final user = _auth.currentUser;
+    if (user == null) return;
+    final uid = user.uid;
 
     try {
       for (final (app, deleted) in await _localDatasource.getUnsyncedApps()) {
@@ -98,9 +106,20 @@ class FlaggedAppsRepository {
         }
         await _localDatasource.markAppSynced(app.packageName, deleted: deleted);
       }
-      for (final entry in (await _localDatasource.getUnsyncedDailyFlaggedTime()).entries) {
-        await _remoteDatasource.saveDailyFlaggedTime(uid, entry.key, entry.value);
-        await _localDatasource.markDailyFlaggedTimeSynced(entry.key);
+      for (final day in await _localDatasource.getUnsyncedDailyUsage()) {
+        final date = day['date'] as String;
+        final updatedAt = day['updatedAt'] as int;
+        //Same body as UsageDto in the Kotlin app. Pickups and unlocks are not measured, Kotlin also sends 0
+        await _remoteDatasource.postDailyUsage(user, {
+          'date': date,
+          'screenTimeMs': day['screenTimeMs'],
+          'pickups': 0,
+          'unlocks': 0,
+          'isPartial': false,
+          'updatedAt': updatedAt,
+          'flaggedTimeMs': day['flaggedTimeMs'],
+        });
+        await _localDatasource.markDailyUsageSynced(date, updatedAt);
       }
     } catch (e) {
       debugPrint('[FlaggedAppsRepository] sync failed, will retry later: $e');
