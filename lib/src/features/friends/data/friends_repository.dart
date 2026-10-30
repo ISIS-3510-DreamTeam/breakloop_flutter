@@ -15,7 +15,7 @@ class FriendsRepository {
   // Time the in-memory friends list is considered up to date
   static const Duration _cacheDuration = Duration(minutes: 5);
 
-  // In-memory cache: friends by uid, owner of the list and when it was downloaded
+  // In-memory cache -> friends by uid, owner of the list and when it was downloaded
   final Map<String, FriendModel> _friendsCache = {};
   String? _cacheOwnerUid;
   DateTime? _cachedAt;

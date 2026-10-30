@@ -6,16 +6,22 @@ class AppPill extends StatelessWidget {
   final String label;
   final VoidCallback? onTap;
 
+  //Smaller padding and text, for buttons inside compact cards
+  final bool small;
+
   const AppPill({
     super.key,
     required this.label,
     this.onTap,
+    this.small = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final pill = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: small
+          ? const EdgeInsets.symmetric(horizontal: 8, vertical: 2)
+          : const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: AppColors.snow,
         borderRadius: BorderRadius.circular(10),
@@ -32,7 +38,7 @@ class AppPill extends StatelessWidget {
         label,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
           color: AppColors.spicyPaprika,
-          fontSize: 13,
+          fontSize: small ? 11 : 13,
           letterSpacing: 0,
         ),
       ),

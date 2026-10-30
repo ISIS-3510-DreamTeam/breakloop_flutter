@@ -41,15 +41,9 @@ class _FriendsPageState extends State<FriendsPage> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
           children: [
-            _buildTitle(),
-            if (state.errorMessage != null) ...[
-              const SizedBox(height: 12),
-              _buildError(state.errorMessage!),
-            ],
+            _buildTitle(state),
             const SizedBox(height: 20),
             _buildAddFriendCard(vm, state),
-            const SizedBox(height: 16),
-            _buildFriendCodeCard(state),
             const SizedBox(height: 24),
             _buildFriendsHeader(state),
             const SizedBox(height: 12),
@@ -60,18 +54,28 @@ class _FriendsPageState extends State<FriendsPage> {
     );
   }
 
-  Widget _buildTitle() {
+  //Title on the left and the user's code on the right
+  Widget _buildTitle(FriendsUiState state) {
     final textTheme = Theme.of(context).textTheme;
 
-    return Column(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('YOUR CIRCLE', style: textTheme.titleLarge),
-        const SizedBox(height: 4),
-        Text(
-          'Encouragement, not race',
-          style: textTheme.bodyMedium?.copyWith(fontSize: 13, color: AppColors.spicyPaprika),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('YOUR CIRCLE', style: textTheme.titleLarge),
+              const SizedBox(height: 4),
+              Text(
+                'Encouragement, not race',
+                style: textTheme.bodyMedium?.copyWith(fontSize: 13, color: AppColors.spicyPaprika),
+              ),
+            ],
+          ),
         ),
+        const SizedBox(width: 12),
+        _buildFriendCodeCard(state),
       ],
     );
   }
@@ -109,6 +113,10 @@ class _FriendsPageState extends State<FriendsPage> {
               ),
             ),
           ),
+          if (state.errorMessage != null) ...[
+            const SizedBox(height: 8),
+            _buildError(state.errorMessage!),
+          ],
           const SizedBox(height: 12),
           AppButton(
             label: 'ADD FRIEND',
@@ -144,31 +152,26 @@ class _FriendsPageState extends State<FriendsPage> {
     }
   }
 
+  //Small card with the user's code and the copy button below
   Widget _buildFriendCodeCard(FriendsUiState state) {
     final code = state.myFriendCode;
 
     return AppCard(
       color: Colors.white,
       shadowOffset: const Offset(0, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          //Without connection the code may not exist yet
           Text('Your code', style: _labelStyle()),
-          const SizedBox(height: 8),
-          if (code == null)
-            Text('Connect to the internet to get your code', style: _footerStyle())
-          else
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    code,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(letterSpacing: 4),
-                  ),
-                ),
-                AppPill(label: 'Copy', onTap: () => _copyCode(code)),
-              ],
-            ),
+          Text(
+            code ?? '—',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(letterSpacing: 3),
+          ),
+          if (code != null) ...[
+            const SizedBox(height: 4),
+            AppPill(label: 'Copy', small: true, onTap: () => _copyCode(code)),
+          ],
         ],
       ),
     );
@@ -178,7 +181,10 @@ class _FriendsPageState extends State<FriendsPage> {
     await Clipboard.setData(ClipboardData(text: code));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Code copied')),
+      const SnackBar(
+        content: Text('Code copied'),
+        backgroundColor: Color.fromARGB(255, 241, 193, 168),
+      ),
     );
   }
 
