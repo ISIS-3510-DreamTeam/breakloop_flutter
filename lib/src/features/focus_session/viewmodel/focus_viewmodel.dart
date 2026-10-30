@@ -5,7 +5,7 @@ import '../data/focus_session_repository.dart';
 import '../model/focus_session_model.dart';
 import '../model/soundscape_service.dart' ;
 import 'focus_session_ui_state.dart';
-
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class FocusViewModel extends ChangeNotifier {
   // Handles saving and syncing focus sessions
@@ -31,13 +31,48 @@ class FocusViewModel extends ChangeNotifier {
   // Time when the current session started
   DateTime? _sessionStartTimestamp;
 
+  // StreamSubscription para el control de conectividad a internet
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  bool _isOffline = false;
+  bool get isOffline => _isOffline;
+
+  bool _showRestoredBanner = false;
+  bool get showRestoredBanner => _showRestoredBanner;
+
   FocusViewModel({
     FocusSessionRepository? repository,
     FirebaseAuth? auth,
     SoundscapeService? soundscapeService,
   })  : _repository = repository ?? FocusSessionRepository(),
         _auth = auth ?? FirebaseAuth.instance,
-        _soundscapeService = soundscapeService ?? SoundscapeService();
+        _soundscapeService = soundscapeService ?? SoundscapeService() {
+    _initConnectivityListener();
+  }
+
+  // Inicializa el detector de red
+  void _initConnectivityListener() {
+    _connectivitySubscription =
+        Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
+      final bool hasConnection = !results.contains(ConnectivityResult.none);
+
+      if (!hasConnection) {
+        _isOffline = true;
+        _showRestoredBanner = false;
+        notifyListeners();
+      } else {
+        if (_isOffline) {
+          _isOffline = false;
+          _showRestoredBanner = true;
+          notifyListeners();
+
+          Future.delayed(const Duration(seconds: 3), () {
+            _showRestoredBanner = false;
+            notifyListeners();
+          });
+        }
+      }
+    });
+  }
 
   // Updates the selected preset duration
   void updatePresetDuration(int minutes) {
@@ -49,8 +84,29 @@ class FocusViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Updates the custom duration entered by the user
-  void updateCustomDuration(int minutes) {
+  /// Updates the custom duration entered by the user with validation
+  void updateCustomDuration(int minutes, {bool validateRange = false}) {
+    // Validar si es menor o igual a 0
+    if (minutes <= 0) {
+      _state = _state.copyWith(
+        isCustomSelected: true,
+        errorMessage: 'Enter a whole number greater than 0.',
+      );
+      notifyListeners();
+      return;
+    }
+
+    // Validar si excede los 120 minutos
+    if (minutes > 120) {
+      _state = _state.copyWith(
+        isCustomSelected: true,
+        errorMessage: "Pomodoro, it's all about taking breaks!",
+      );
+      notifyListeners();
+      return;
+    }
+
+    // Si todo está bien, actualiza la duración y limpia el error
     _state = _state.copyWith(
       customDurationMinutes: minutes,
       selectedDurationMinutes: minutes,
@@ -83,7 +139,7 @@ class FocusViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-    // Stops the soundscape when leaving the Focus tab
+  // Stops the soundscape when leaving the Focus tab
   Future<void> stopSoundscape() async {
     await _soundscapeService.stopSound();
   }
@@ -209,7 +265,8 @@ class FocusViewModel extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    //  5 si se completa, 2 si se abandona (sale)
+    
+    // 5 si se completa, 2 si se abandona (sale)
     final int earnedXp = (status == SessionStatus.completed) ? 5 : 2;
 
     // Create the session model
@@ -220,7 +277,7 @@ class FocusViewModel extends ChangeNotifier {
       duration: _state.selectedDurationMinutes * 60, 
       sessionType: SessionType.focus, 
       sessionStatus: status,
-      xpEarned: earnedXp, // <--- Asignamos los puntos fijos según la regla
+      xpEarned: earnedXp, // Asignamos los puntos fijos según la regla
       isSynced: false,
     );
     try {
@@ -261,7 +318,8 @@ class FocusViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
-    // Cancel the timer when the ViewModel is removed
+    // Cancel the timer and connectivity listener when the ViewModel is removed
+    _connectivitySubscription?.cancel();
     _timer?.cancel();
     super.dispose();
   }
