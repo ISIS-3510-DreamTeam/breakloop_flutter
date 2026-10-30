@@ -5,6 +5,7 @@ import '../../../core/widgets/app_card.dart';
 import '../model/offline_activity.dart';
 import 'category_style.dart';
 
+//Row of the activity list: category icon, title, duration, XP and category
 class ActivityCard extends StatelessWidget {
   final OfflineActivity activity;
   final VoidCallback onTap;
@@ -18,60 +19,34 @@ class ActivityCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AppCard(
-        color: Colors.white,
+        shadowOffset: const Offset(2, 2),
         child: Row(
           children: [
             Container(
-              width: 52,
-              height: 52,
-              alignment: Alignment.center,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                color: AppColors.headerBackground,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.darkCoffee, width: 2),
-                boxShadow: const [
-                  BoxShadow(color: AppColors.darkCoffee, offset: Offset(0, 3), blurRadius: 0),
-                ],
+                color: categoryColor(activity.category),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.darkCoffee, width: 1.5),
               ),
-              child: Text(categoryEmoji(activity.category), style: const TextStyle(fontSize: 22)),
+              child: Icon(categoryIcon(activity.category), size: 22, color: AppColors.darkCoffee),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text(activity.title, style: textTheme.titleMedium),
                   Text(
-                    activity.title,
-                    style: textTheme.labelLarge?.copyWith(fontSize: 14, letterSpacing: 0),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${categoryLabel(activity.category)} · ${activity.prompt}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: textTheme.bodyMedium?.copyWith(
-                      fontSize: 12,
-                      color: AppColors.darkCoffee.withValues(alpha: 0.75),
-                    ),
+                    '${activity.durationMin} MIN · +${activity.xp} XP · ${categoryLabel(activity.category).toUpperCase()}',
+                    style: textTheme.labelSmall?.copyWith(color: AppColors.neutral700),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '${activity.durationMin} min',
-                  style: textTheme.labelLarge?.copyWith(fontSize: 15, letterSpacing: 0, color: AppColors.spicyPaprika),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '+${activity.xp} XP',
-                  style: textTheme.labelLarge?.copyWith(fontSize: 11, letterSpacing: 0, color: AppColors.fern),
-                ),
-              ],
-            ),
+            const SizedBox(width: 12),
+            const Icon(Icons.chevron_right, color: AppColors.neutral700),
           ],
         ),
       ),

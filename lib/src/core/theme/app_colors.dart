@@ -19,6 +19,7 @@ class AppColors {
   static const golden100 = Color(0xFFFBEBDA);
   static const fern100 = Color(0xFFE5E3DB);
   static const neutral100 = Color(0xFFEBE3E1);
+  static const neutral200 = Color(0xFFCEC5C1);
   static const neutral500 = Color(0xFF9D918C);
   static const neutral700 = Color(0xFF756862);
 

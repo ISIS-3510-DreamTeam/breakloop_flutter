@@ -74,50 +74,43 @@ class _OfflineViewContent extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        AppCard(
-          color: AppColors.headerBackground,
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('WHAT WILL YOU DO OFFLINE?', style: textTheme.labelLarge?.copyWith(fontSize: 16, letterSpacing: 0.5)),
-              const SizedBox(height: 6),
-              Text(
-                'Tangible alternatives to break the screen reflex.',
-                style: textTheme.bodyMedium?.copyWith(fontSize: 13, color: AppColors.darkCoffee.withValues(alpha: 0.8)),
-              ),
-            ],
-          ),
+        Text('SCREEN-FREE SESSION', style: textTheme.labelSmall?.copyWith(color: AppColors.paprika700)),
+        const SizedBox(height: 2),
+        Text('What will you do offline?', style: textTheme.titleLarge),
+        const SizedBox(height: 2),
+        Text(
+          'How much time do you have right now?',
+          style: textTheme.bodyMedium?.copyWith(color: AppColors.neutral700),
         ),
         if (state.needsLocationPermission) ...[
           const SizedBox(height: 20),
           _buildLocationPermissionCard(context, vm),
         ],
         const SizedBox(height: 20),
+        TimeSelector(
+          availableMin: state.availableMin,
+          onTimeSelected: vm.onAvailableTimeSelected,
+        ),
+        const SizedBox(height: 20),
         SuggestedCard(
           suggestion: state.suggestion,
           availableMin: state.availableMin,
           isWeatherAvailable: state.isWeatherAvailable,
-          onTimeSelected: vm.onAvailableTimeSelected,
           onActivityTap: (id) => _openActivity(context, id, fromSuggestion: true),
         ),
         const SizedBox(height: 20),
+        Text('OR EXPLORE ALL ACTIVITIES', style: textTheme.labelSmall?.copyWith(color: AppColors.neutral700)),
+        const SizedBox(height: 12),
         CategoryChips(
           selectedCategory: state.selectedCategory,
           onCategorySelected: vm.onCategorySelected,
         ),
-        const SizedBox(height: 20),
-        Text(
-          'ALL ACTIVITIES',
-          style: textTheme.labelLarge?.copyWith(fontSize: 12, letterSpacing: 0.5, color: AppColors.darkCoffee.withValues(alpha: 0.75)),
-        ),
-        const SizedBox(height: 12),
         for (final activity in state.activities) ...[
+          const SizedBox(height: 12),
           ActivityCard(
             activity: activity,
             onTap: () => _openActivity(context, activity.id, fromSuggestion: false),
           ),
-          const SizedBox(height: 14),
         ],
       ],
     );
@@ -128,17 +121,15 @@ class _OfflineViewContent extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return AppCard(
-      color: Colors.white,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Want weather-aware suggestions?', style: textTheme.labelLarge?.copyWith(fontSize: 14, letterSpacing: 0)),
-          const SizedBox(height: 4),
+          Text('Want weather-aware suggestions?', style: textTheme.titleSmall),
           Text(
             'We only use your approximate location to check the weather.',
-            style: textTheme.bodyMedium?.copyWith(fontSize: 13, color: AppColors.darkCoffee.withValues(alpha: 0.75)),
+            style: textTheme.bodySmall?.copyWith(color: AppColors.neutral700),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           BreakLoopChip(label: 'Enable location', selected: true, onTap: vm.requestLocationPermission),
         ],
       ),
