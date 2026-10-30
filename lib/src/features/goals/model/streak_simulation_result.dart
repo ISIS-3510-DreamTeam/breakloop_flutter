@@ -36,4 +36,9 @@ class StreakSimulationResult {
     );
   }
 
+  double probabilityFor(int goalMinutes) {
+    final raw = ((goalMinutes - minGoal) / step).round();
+    return probabilities[raw.clamp(0, probabilities.length - 1)];
+  }
+
 }

@@ -79,7 +79,7 @@ StreakSimulationResult runStreakSimulation(StreakSimulationInput input) {
 
     final index = threshold <= input.minGoal
         ? 0
-        : (threshold - input.minGoal -input.step - 1) ~/ input.step;
+        : (threshold - input.minGoal + input.step - 1) ~/ input.step;
 
     histogram[index]++;
   }
