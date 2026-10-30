@@ -1,5 +1,7 @@
+
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../data/accelerometer_adapter.dart';
 import '../data/phone_check_repository.dart';
@@ -10,16 +12,23 @@ class StatisticsViewModel extends ChangeNotifier {
   // Service that handles the phone check logic.
   late final PhoneCheckService _service;
 
-  // Subscription used to listen for phone check detections
+  // Repository that stores and synchronizes phone pickups.
+  late final PhoneCheckRepository _repository;
+
+  // Subscriptions used to listen for updates.
   StreamSubscription<bool>? _subscription;
+  StreamSubscription<void>? _statsSubscription;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+
+  bool _disposed = false;
 
   /// Statistics shown in the View.
   int _dailyPickups = 0;
   int _avgIntervalMinutes = 0;
   String _baselineText = '-';
-  bool _isListening = true;
+  final bool _isListening = true;
 
-  // Values for the Mindful Unlock card
+  // Values for the Mindful Unlock card.
   int _mindfulPercentage = 0;
   int _impulsivePercentage = 0;
 
@@ -28,61 +37,92 @@ class StatisticsViewModel extends ChangeNotifier {
   int get avgIntervalMinutes => _avgIntervalMinutes;
   String get baselineText => _baselineText;
   bool get isListening => _isListening;
-
   int get mindfulPercentage => _mindfulPercentage;
   int get impulsivePercentage => _impulsivePercentage;
 
-  // Creates the objects needed to get and process the data
+  // Creates the objects needed to get and process the data.
   StatisticsViewModel() {
     final adapter = SensorsPlusAccelerometerAdapter();
-    final repository = PhoneCheckRepository();
+    _repository = PhoneCheckRepository();
 
-    _service = PhoneCheckService(adapter, repository);
+    _service = PhoneCheckService(adapter, _repository);
 
-    /// Load the initial statistics.
-    _loadData();
+    // Load the initial statistics.
+    unawaited(_loadData());
 
-    // Start listening for new phone check detections
+    // Listen for pickup detections and statistics updates.
     _initListening();
+
+    // Retry synchronization when connectivity returns.
+    _listenToConnectivity();
   }
 
-  // Loads and calculates the statistics from the Service
+  // Loads and calculates the statistics from the Service.
   Future<void> _loadData() async {
-    _dailyPickups = await _service.getTodayPickupCount();
-    _avgIntervalMinutes = await _service.getAverageIntervalMinutes();
-    _baselineText = await _service.getBaselineDifferenceText();
+    final dailyPickups = await _service.getTodayPickupCount();
+    final avgInterval = await _service.getAverageIntervalMinutes();
+    final baseline = await _service.getBaselineDifferenceText();
+    final mindful = await _service.getMindfulPercentage();
+    final impulsive = await _service.getImpulsivePercentage();
 
-    // Get the percentages for the Mindful Unlock card.
-    _mindfulPercentage = await _service.getMindfulPercentage();
-    _impulsivePercentage = await _service.getImpulsivePercentage();
+    if (_disposed) return;
 
-    /// Notify the View that the data has changed
+    _dailyPickups = dailyPickups;
+    _avgIntervalMinutes = avgInterval;
+    _baselineText = baseline;
+    _mindfulPercentage = mindful;
+    _impulsivePercentage = impulsive;
+
     notifyListeners();
   }
 
-  // Listens for new phone check detections
+  // Listens for new phone check detections and statistics updates.
   void _initListening() {
-    _subscription = _service.onPhoneCheckDetected.listen((isDetected) async {
+    _subscription = _service.onPhoneCheckDetected.listen((isDetected) {
       if (isDetected && _isListening) {
-
-
-        // Update the statistics when a new pickup is detected
-        await _loadData();
+        unawaited(_loadData());
       }
     });
 
-    // Listen for other updates from the Service
-    _service.onStatsUpdated.listen((_) async {
-      await _loadData();
+    _statsSubscription = _service.onStatsUpdated.listen((_) {
+      unawaited(_loadData());
     });
+  }
+
+  // Listens for connectivity changes.
+  void _listenToConnectivity() {
+    _connectivitySubscription =
+        Connectivity().onConnectivityChanged.listen((results) {
+      final hasConnection = results.any(
+        (result) => result != ConnectivityResult.none,
+      );
+
+      if (hasConnection) {
+        unawaited(_syncPendingPickups());
+      }
+    });
+  }
+
+  // Attempts to synchronize locally stored pickups with Firebase.
+  Future<void> _syncPendingPickups() async {
+    try {
+      await _repository.syncUnsyncedPickups();
+    } catch (_) {
+      // Keep pending pickups locally if synchronization fails.
+    }
   }
 
   @override
   void dispose() {
-    // Stop listening to the phone check stream
-    _subscription?.cancel();
+    _disposed = true;
 
-    /// Dispose the ViewModel
+    // Cancel subscriptions to prevent callbacks after disposal.
+    _subscription?.cancel();
+    _statsSubscription?.cancel();
+    _connectivitySubscription?.cancel();
+
+    _service.dispose();
+
     super.dispose();
   }
 }
