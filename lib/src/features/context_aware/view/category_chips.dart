@@ -19,19 +19,16 @@ class CategoryChips extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      //Room for the chip shadow
-      padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         children: [
-          _CategoryChip(
+          _FilterChip(
             label: 'All',
             selected: selectedCategory == null,
             onTap: () => onCategorySelected(null),
           ),
           for (final category in ActivityCategory.values) ...[
-            const SizedBox(width: 10),
-            _CategoryChip(
-              emoji: categoryEmoji(category),
+            const SizedBox(width: 8),
+            _FilterChip(
               label: categoryLabel(category),
               selected: selectedCategory == category,
               onTap: () => onCategorySelected(category),
@@ -43,14 +40,13 @@ class CategoryChips extends StatelessWidget {
   }
 }
 
-class _CategoryChip extends StatelessWidget {
-  final String? emoji;
+//Light outlined chip, filled with a soft neutral when selected
+class _FilterChip extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
 
-  const _CategoryChip({
-    this.emoji,
+  const _FilterChip({
     required this.label,
     required this.selected,
     required this.onTap,
@@ -58,34 +54,20 @@ class _CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 66,
-        padding: const EdgeInsets.symmetric(horizontal: 18),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
         decoration: BoxDecoration(
-          color: selected ? AppColors.spicyPaprika : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.darkCoffee, width: 2),
-          boxShadow: const [
-            BoxShadow(color: AppColors.darkCoffee, offset: Offset(0, 3), blurRadius: 0),
-          ],
+          color: selected ? AppColors.neutral100 : Colors.transparent,
+          borderRadius: BorderRadius.circular(50),
+          border: Border.all(color: selected ? AppColors.darkCoffee : AppColors.neutral200, width: 1.5),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (emoji != null) Text(emoji!, style: const TextStyle(fontSize: 16)),
-            Text(
-              label,
-              style: textTheme.labelLarge?.copyWith(
-                fontSize: 13,
-                letterSpacing: 0,
-                color: selected ? AppColors.snow : AppColors.darkCoffee,
-              ),
-            ),
-          ],
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: selected ? AppColors.darkCoffee : AppColors.neutral700,
+          ),
         ),
       ),
     );

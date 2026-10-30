@@ -74,7 +74,6 @@ class _DeepStatsViewContent extends StatelessWidget {
 
     return AppCard(
       color: Colors.white,
-      shadowOffset: const Offset(0, 4),
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -147,7 +146,6 @@ class _DeepStatsViewContent extends StatelessWidget {
 
     return AppCard(
       color: Colors.white,
-      shadowOffset: const Offset(0, 4),
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

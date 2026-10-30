@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text_styles.dart';
 
-//Small bordered chip with a hard shadow. Filled with paprika when selected
+//Small round bordered chip. Filled with paprika when selected
 class BreakLoopChip extends StatelessWidget {
   final String label;
   final bool selected;
@@ -15,20 +16,15 @@ class BreakLoopChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
           color: selected ? AppColors.spicyPaprika : AppColors.snow,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(50),
           border: Border.all(color: AppColors.darkCoffee, width: 2),
-          boxShadow: const [
-            BoxShadow(color: AppColors.darkCoffee, offset: Offset(0, 3), blurRadius: 0),
-          ],
         ),
         child: Text(
           label,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            fontSize: 12,
-            letterSpacing: 0,
+          style: AppTextStyles.monoLabel.copyWith(
             color: selected ? AppColors.snow : AppColors.darkCoffee,
           ),
         ),

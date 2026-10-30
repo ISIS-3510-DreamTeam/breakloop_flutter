@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_text_styles.dart';
 
-//Small bordered label with a hard bottom shadow, used for status chips and compact buttons
+//Small round bordered label, used for status chips and compact buttons
 class AppPill extends StatelessWidget {
   final String label;
   final VoidCallback? onTap;
@@ -21,27 +22,13 @@ class AppPill extends StatelessWidget {
     final pill = Container(
       padding: small
           ? const EdgeInsets.symmetric(horizontal: 8, vertical: 2)
-          : const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          : const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
         color: AppColors.snow,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(50),
         border: Border.all(color: AppColors.darkCoffee, width: 2),
-        boxShadow: const [
-          BoxShadow(
-            color: AppColors.darkCoffee,
-            offset: Offset(0, 3),
-            blurRadius: 0,
-          ),
-        ],
       ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: AppColors.spicyPaprika,
-          fontSize: small ? 11 : 13,
-          letterSpacing: 0,
-        ),
-      ),
+      child: Text(label, style: AppTextStyles.monoLabel.copyWith(fontSize: small ? 11 : 13)),
     );
 
     if (onTap == null) {
