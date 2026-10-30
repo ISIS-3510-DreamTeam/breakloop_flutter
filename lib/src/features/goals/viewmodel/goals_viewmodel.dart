@@ -1,4 +1,4 @@
-import 'package:breakloop_flutter/src/features/screen_time_progress/model/daily_screen_time.dart';
+
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 
@@ -6,7 +6,11 @@ import '../data/goals_repository.dart';
 import '../model/goal_model.dart';
 import '../model/daily_progress.dart';
 
+import 'package:breakloop_flutter/src/features/screen_time_progress/model/daily_screen_time.dart';
 import 'package:breakloop_flutter/src/features/screen_time_progress/data/screen_time_repository.dart';
+
+import '../data/streak_simulation_service.dart';
+import '../model/streak_simulation_result.dart';
 
 enum GoalsStatus {
   loading,
@@ -17,14 +21,30 @@ enum GoalsStatus {
 }
 
 class GoalsViewModel extends ChangeNotifier {
+
   final GoalsRepository _goalsRepository;
   final ScreenTimeRepository _screenTimeRepository;
+  final StreakSimulationService _streakSimulationService;
+  bool _disposed = false;
   Timer? _refreshTimer;
   bool _isProcessingRollover = false;
+
+
   //identifier to prevent race-conditions
   int _usageRequestId = 0;
 
-  GoalsViewModel(this._goalsRepository, this._screenTimeRepository){
+  //Simulation state
+  StreakSimulationResult? simulation;
+  bool isSimulating = false;
+  DateTime? _simulationDay;
+  int _simulationRequestId = 0;
+
+
+  GoalsViewModel(
+      this._goalsRepository,
+      this._screenTimeRepository,
+      {this._streakSimulationService = const StreakSimulationService()})
+  {
     _subscribeToGoal();
     //We added a timer to refresh data every minute.
     _refreshTimer = Timer.periodic(const Duration(minutes: 1), (_)=>reloadUsage());
@@ -157,8 +177,45 @@ class GoalsViewModel extends ChangeNotifier {
     return _goalsRepository.schedulePendingLimit(minutes);
   }
 
+  Future<void> loadStreakSimulation({bool force = false}) async {
+    final today = _dateOnly(DateTime.now());
+    if (!force && simulation != null && _simulationDay == today) return;
+
+    final requestId = ++_simulationRequestId;
+    isSimulating = true;
+    notifyListeners();
+
+    try {
+      if(!await _screenTimeRepository.hasPermission()) {
+        simulation = null;
+        return;
+      }
+
+      final records = await _screenTimeRepository.getDailyScreenTime();
+      final result = await _streakSimulationService.simulate(records);
+
+      if (requestId != _simulationRequestId || _disposed) return;
+
+      simulation = result;
+      _simulationDay = today;
+
+    } catch (e) {
+      debugPrint('[GoalsViewModel] ERROR simulating streak: $e');
+      if (requestId == _simulationRequestId) simulation = null;
+    } finally {
+      if (requestId == _simulationRequestId && !_disposed) {
+        isSimulating = false;
+        notifyListeners();
+      }
+
+    }
+
+  }
+
+
   @override
   void dispose() {
+    _disposed = true;
     _refreshTimer?.cancel();
     _goalsRepository.dispose();
     super.dispose();
