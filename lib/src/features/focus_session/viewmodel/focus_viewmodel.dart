@@ -3,7 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../data/focus_session_repository.dart';
 import '../model/focus_session_model.dart';
+import '../model/soundscape_service.dart' ;
 import 'focus_session_ui_state.dart';
+
 
 class FocusViewModel extends ChangeNotifier {
   // Handles saving and syncing focus sessions
@@ -11,6 +13,8 @@ class FocusViewModel extends ChangeNotifier {
 
   // Handles the current authenticated user
   final FirebaseAuth _auth;
+
+  final SoundscapeService _soundscapeService;
 
   // Stores the current state of the focus session
   FocusSessionUiState _state = const FocusSessionUiState();
@@ -30,8 +34,10 @@ class FocusViewModel extends ChangeNotifier {
   FocusViewModel({
     FocusSessionRepository? repository,
     FirebaseAuth? auth,
+    SoundscapeService? soundscapeService,
   })  : _repository = repository ?? FocusSessionRepository(),
-        _auth = auth ?? FirebaseAuth.instance;
+        _auth = auth ?? FirebaseAuth.instance,
+        _soundscapeService = soundscapeService ?? SoundscapeService();
 
   // Updates the selected preset duration
   void updatePresetDuration(int minutes) {
@@ -64,11 +70,13 @@ class FocusViewModel extends ChangeNotifier {
   }
 
   // Changes the selected soundscape
-  void selectSoundscape(Soundscape soundscape) {
-    _state = _state.copyWith(activeSoundscape: soundscape);
-    notifyListeners();
-  }
+  Future<void> selectSoundscape(Soundscape soundscape) async {
+      _state = _state.copyWith(activeSoundscape: soundscape);
+      notifyListeners();
 
+      // Llama al servicio para que lo gestione en segundo plano y lo reproduzca
+      await _soundscapeService.playSoundscape(soundscape);
+    }
   // enables or disables the app blocker
   void toggleAppBlocker(bool enabled) {
     _state = _state.copyWith(isAppBlockerActive: enabled);

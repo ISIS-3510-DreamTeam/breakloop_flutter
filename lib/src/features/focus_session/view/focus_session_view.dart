@@ -398,9 +398,9 @@ class FocusSetupContent extends StatelessWidget {
                       emoji: '🔥',
                       label: 'Hearth\nCrackle',
                       selected:
-                          state.activeSoundscape == Soundscape.waves,
+                          state.activeSoundscape == Soundscape.fire,
                       onTap: () =>
-                          viewModel.selectSoundscape(Soundscape.waves),
+                          viewModel.selectSoundscape(Soundscape.fire),
                     ),
                   ),
                   const SizedBox(width: 8),
