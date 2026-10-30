@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../viewmodel/screen_time_progress_viewmodel.dart';
 import '../../goals/viewmodel/goals_viewmodel.dart';
+import '../../flagged_apps/view/flagged_apps_card.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_button.dart';
@@ -148,6 +149,8 @@ class _ScreenTimeProgressPageState extends State<ScreenTimeProgressPage> with Wi
             ],
           ),
         ),
+        const SizedBox(height: 24),
+        const FlaggedAppsCard(),
         const SizedBox(height: 24),
         _buildReductionCard(vm),
       ],

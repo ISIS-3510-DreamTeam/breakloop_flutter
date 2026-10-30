@@ -15,6 +15,8 @@ import '../features/screen_time_progress/data/usage_stats_screen_time_repository
 import '../features/screen_time_progress/viewmodel/screen_time_progress_viewmodel.dart';
 import '../features/goals/data/goals_repository.dart';
 import '../features/goals/viewmodel/goals_viewmodel.dart';
+import '../features/flagged_apps/data/flagged_apps_repository.dart';
+import '../features/flagged_apps/viewmodel/flagged_apps_viewmodel.dart';
 
 //Source of the screen-time data:
 //false -> mock data (works on any device or emulator)
@@ -45,6 +47,9 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (ctx) => GoalsViewModel(ctx.read<GoalsRepository>(), ctx.read<ScreenTimeRepository>()),
         ),
+        //Shared by the flagged apps screen and the card in Stats
+        Provider(create: (_) => FlaggedAppsRepository(), dispose: (_, repository) => repository.dispose()),
+        ChangeNotifierProvider(create: (ctx) => FlaggedAppsViewModel(ctx.read<FlaggedAppsRepository>())),
       ],
       child: const _RouterApp(),
     );
