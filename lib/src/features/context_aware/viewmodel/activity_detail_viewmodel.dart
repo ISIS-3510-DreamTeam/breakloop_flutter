@@ -13,6 +13,8 @@ import '../model/activity_phase.dart';
 import '../model/activity_source.dart';
 import 'activity_detail_ui_state.dart';
 
+//Same logic as ActivityDetailViewModel in the Kotlin app (PR #58): the timer is restored from the open log,
+//so it continues after leaving the view or closing the app
 class ActivityDetailViewModel extends ChangeNotifier {
   final String _activityId;
   final ActivitySource _source;
@@ -26,7 +28,12 @@ class ActivityDetailViewModel extends ChangeNotifier {
   ActivityDetailUiState uiState = const ActivityDetailLoading();
 
   String? _logId;
+  //When the timer ends. The remaining time is always calculated from it, so it is right after a restore
+  DateTime? _endAt;
   Timer? _timer;
+  //Saving the start of the log, finish waits for it to have the log id
+  Future<void>? _startFuture;
+  StreamSubscription<void>? _changesSubscription;
   bool _disposed = false;
 
   ActivityDetailViewModel(
@@ -52,46 +59,95 @@ class ActivityDetailViewModel extends ChangeNotifier {
     if (_disposed) return;
     if (activity == null) {
       uiState = const ActivityDetailNotFound();
-    } else {
+      notifyListeners();
+      return;
+    }
+
+    final open = await _activityLogRepository.getOpenLog(activityId: _activityId);
+    if (_disposed) return;
+
+    //Not started: ready, unless another activity is running
+    if (open == null) {
       uiState = ActivityDetailContent(
         activity: activity,
         phase: ActivityPhase.ready,
         remainingSeconds: activity.durationMin * 60,
       );
+      notifyListeners();
+      _changesSubscription = _activityLogRepository.watchChanges().listen((_) => _checkBlocked());
+      await _checkBlocked();
+      return;
     }
+
+    //Started before: continue the timer, or finish it if the time already passed
+    _logId = open.id;
+    final endAt = open.startedAt.add(Duration(minutes: activity.durationMin));
+    _endAt = endAt;
+    uiState = ActivityDetailContent(
+      activity: activity,
+      phase: ActivityPhase.running,
+      remainingSeconds: _remainingSeconds(endAt),
+    );
+    notifyListeners();
+    if (DateTime.now().isBefore(endAt)) {
+      _startTicker();
+    } else {
+      finish();
+    }
+  }
+
+  //Another activity with an open log blocks this one, like in the Kotlin app
+  Future<void> _checkBlocked() async {
+    final current = _content;
+    if (current == null || current.phase != ActivityPhase.ready) return;
+
+    final open = await _activityLogRepository.getOpenLog();
+    BlockingActivity? blockedBy;
+    if (open != null && open.activityId != _activityId) {
+      final blocking = await _activityRepository.getActivity(open.activityId);
+      blockedBy = BlockingActivity(activityId: open.activityId, title: blocking?.title ?? '');
+    }
+    final latest = _content;
+    if (_disposed || latest == null || latest.phase != ActivityPhase.ready) return;
+    uiState = latest.copyWith(blockedBy: blockedBy, clearBlocked: blockedBy == null);
     notifyListeners();
   }
 
   //Starts the countdown and saves the log with the current context
   void start() {
     final current = _content;
-    if (current == null) return;
+    if (current == null || current.phase != ActivityPhase.ready || current.blockedBy != null) return;
 
-    //In case Start is tapped twice
-    _timer?.cancel();
-    uiState = current.copyWith(phase: ActivityPhase.running);
+    final endAt = DateTime.now().add(Duration(minutes: current.activity.durationMin));
+    _endAt = endAt;
+    uiState = current.copyWith(phase: ActivityPhase.running, remainingSeconds: _remainingSeconds(endAt));
     notifyListeners();
 
-    _saveStart(current.activity.id, current.activity.category, current.activity.durationMin);
+    _startFuture = _saveStart(current.activity.id, current.activity.category, current.activity.durationMin);
+    _startTicker();
+  }
 
+  void _startTicker() {
+    //In case Start is tapped twice
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       final content = _content;
-      if (content == null) return;
+      final endAt = _endAt;
+      if (content == null || endAt == null) return;
 
-      if (content.remainingSeconds > 1) {
-        uiState = content.copyWith(remainingSeconds: content.remainingSeconds - 1);
+      if (DateTime.now().isBefore(endAt)) {
+        uiState = content.copyWith(remainingSeconds: _remainingSeconds(endAt));
         notifyListeners();
       } else {
-        _complete(content.copyWith(remainingSeconds: 0));
+        finish();
       }
     });
   }
 
-  //The user finishes the activity before the countdown ends
-  void finish() {
-    final current = _content;
-    if (current == null) return;
-    _complete(current);
+  //Seconds until endAt, rounded up so the timer shows 00:01 until the very end
+  int _remainingSeconds(DateTime endAt) {
+    final remainingMs = endAt.difference(DateTime.now()).inMilliseconds;
+    return remainingMs <= 0 ? 0 : (remainingMs + 999) ~/ 1000;
   }
 
   //The log keeps the category and the place for BQ12
@@ -113,21 +169,30 @@ class ActivityDetailViewModel extends ChangeNotifier {
     }
   }
 
-  void _complete(ActivityDetailContent current) {
+  //Ends the activity: when the timer reaches zero or when the user taps "I'm done"
+  Future<void> finish() async {
     _timer?.cancel();
-    uiState = current.copyWith(phase: ActivityPhase.completed);
+    final current = _content;
+    if (current == null || current.phase == ActivityPhase.completed) return;
+    uiState = current.copyWith(phase: ActivityPhase.completed, remainingSeconds: 0);
     notifyListeners();
 
+    await _startFuture;
     final logId = _logId;
-    if (logId != null) {
-      _activityLogRepository.completeLog(logId, current.activity.xp);
-    }
+    if (logId == null) return;
+    //A timer that ended while the app was closed is completed at its end, not when the user came back
+    final endAt = _endAt;
+    final now = DateTime.now();
+    final completedAt = endAt != null && endAt.isBefore(now) ? endAt : now;
+    await _activityLogRepository.completeLog(logId, current.activity.xp, completedAt: completedAt);
   }
 
   @override
   void dispose() {
     _disposed = true;
+    //The log stays open, so the timer can be restored when the view is opened again
     _timer?.cancel();
+    _changesSubscription?.cancel();
     super.dispose();
   }
 }

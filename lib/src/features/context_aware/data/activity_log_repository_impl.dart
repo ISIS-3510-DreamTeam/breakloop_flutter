@@ -72,14 +72,14 @@ class ActivityLogRepositoryImpl implements ActivityLogRepository {
   }
 
   @override
-  Future<void> completeLog(String logId, int xp) async {
+  Future<void> completeLog(String logId, int xp, {DateTime? completedAt}) async {
     final logs = await _readLogs();
     final index = logs.indexWhere((log) => log.id == logId);
     if (index == -1) return;
 
-    final now = DateTime.now();
+    final end = completedAt ?? DateTime.now();
     final log = logs[index];
-    logs[index] = log.complete(now, xp, await _avoidedScreenMs(log.startedAt, now));
+    logs[index] = log.complete(end, xp, await _avoidedScreenMs(log.startedAt, end));
     await _writeLogs(logs);
     _changes.add(null);
     unawaited(syncActivityLogs());
@@ -92,6 +92,18 @@ class ActivityLogRepositoryImpl implements ActivityLogRepository {
     final used = await _screenUsage.getScreenTimeBetween(startedAt, completedAt);
     if (used == null) return duration;
     return max(0, duration - used);
+  }
+
+  @override
+  Future<ActivityLogEntry?> getOpenLog({String? activityId}) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return null;
+    final open = (await _readLogs()).where((log) {
+      return log.userId == uid && log.completedAt == null && (activityId == null || log.activityId == activityId);
+    }).toList();
+    if (open.isEmpty) return null;
+    open.sort((a, b) => b.startedAt.compareTo(a.startedAt));
+    return open.first;
   }
 
   @override

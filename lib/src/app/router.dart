@@ -61,7 +61,7 @@ GoRouter buildRouter(AuthRepository authRepository) {
       GoRoute(path: '/password-reset', builder: (_, _) => const PasswordResetPage()),
 
       StatefulShellRoute.indexedStack(
-          builder: (context, state, navigationShell) => MainShell(navigationShell: navigationShell),
+          builder: (context, state, navigationShell) => MainShell(navigationShell: navigationShell, location: state.uri.path),
           branches: [
             StatefulShellBranch(routes: [
               GoRoute(path: '/home', builder: (_, _) => const HomePage()),

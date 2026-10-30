@@ -16,7 +16,12 @@ abstract interface class ActivityLogRepository {
     String? interactionId,
   );
 
-  Future<void> completeLog(String logId, int xp);
+  //completedAt defaults to now. A timer that ended while the app was closed passes the end of the timer
+  Future<void> completeLog(String logId, int xp, {DateTime? completedAt});
+
+  //Latest log of the current account that was started and not completed (of activityId, or of any activity).
+  //It lets the timer of an activity continue after leaving the view or closing the app
+  Future<ActivityLogEntry?> getOpenLog({String? activityId});
 
   //Ids of the last completed activities, most recent first
   Future<List<String>> getRecentActivityIds(int limit);

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_button.dart';
+import '../../../core/widgets/app_card.dart';
 import '../data/activity_catalog_data_source.dart';
 import '../data/activity_log_repository_impl.dart';
 import '../data/activity_repository_impl.dart';
@@ -163,6 +164,33 @@ class _ActivityDetailViewContent extends StatelessWidget {
 
     switch (state.phase) {
       case ActivityPhase.ready:
+        final blockedBy = state.blockedBy;
+        //Only one activity at a time, like in the Kotlin app
+        if (blockedBy != null) {
+          return [
+            AppCard(
+              color: AppColors.golden100,
+              child: Row(
+                children: [
+                  const Icon(Icons.timer_outlined, size: 28, color: AppColors.paprika700),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "You're already doing ${blockedBy.title}. Finish it before starting a new one.",
+                      style: textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            AppButton(
+              label: 'Go to ${blockedBy.title}',
+              //Replaces this detail, so back returns to the list
+              onPressed: () => context.pushReplacement('/offline/activity/${blockedBy.activityId}?fromSuggestion=false'),
+            ),
+          ];
+        }
         return [
           Text(
             'Put your phone away and give this your full attention.',
