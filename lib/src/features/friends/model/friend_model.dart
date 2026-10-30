@@ -15,6 +15,26 @@ class FriendModel {
     required this.petLevel,
   });
 
+  // Creates a FriendModel from locally stored data
+  factory FriendModel.fromMap(Map<String, dynamic> map) {
+    return FriendModel(
+      uid: map['uid'] as String,
+      displayName: map['displayName'] as String? ?? '',
+      streak: map['streak'] as int? ?? 0,
+      petLevel: map['petLevel'] as int? ?? 1,
+    );
+  }
+
+  // Converts the model into a Map for local storage
+  Map<String, dynamic> toMap() {
+    return {
+      'uid': uid,
+      'displayName': displayName,
+      'streak': streak,
+      'petLevel': petLevel,
+    };
+  }
+
   // Creates a FriendModel from the friend's profile (users/{uid})
   // and progress (users/{uid}/progress/current) documents
   factory FriendModel.fromFirestore({

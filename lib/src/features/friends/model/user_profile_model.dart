@@ -28,6 +28,26 @@ class UserProfileModel {
     );
   }
 
+  // Creates a UserProfileModel from locally stored data
+  factory UserProfileModel.fromMap(Map<String, dynamic> map) {
+    return UserProfileModel(
+      uid: map['uid'] as String,
+      email: map['email'] as String? ?? '',
+      displayName: map['displayName'] as String? ?? '',
+      friendCode: map['friendCode'] as String,
+    );
+  }
+
+  // Converts the model into a Map for local storage
+  Map<String, dynamic> toMap() {
+    return {
+      'uid': uid,
+      'email': email,
+      'displayName': displayName,
+      'friendCode': friendCode,
+    };
+  }
+
   // Converts the model into a format that can be sent to Firestore
   Map<String, dynamic> toFirestore() {
     return {

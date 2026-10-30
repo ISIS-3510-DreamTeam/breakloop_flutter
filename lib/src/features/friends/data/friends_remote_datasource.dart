@@ -11,7 +11,10 @@ class FriendsRemoteDatasource {
 
   // Characters used for friend codes (without 0/O and 1/I to avoid confusion)
   static const String _codeChars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  static const int _codeLength = 6;
+  static const int _codeLength = 4;
+
+  // Reads go to the server so offline errors are not hidden by Firestore's own cache
+  static const GetOptions _serverOnly = GetOptions(source: Source.server);
 
   // Uses the provided Firestore instance or the default one.
   FriendsRemoteDatasource({FirebaseFirestore? firestore})
@@ -19,7 +22,7 @@ class FriendsRemoteDatasource {
 
   // Gets the user's profile, or null if it has no friend code yet.
   Future<UserProfileModel?> fetchProfile(String uid) async {
-    final doc = await _firestore.collection('users').doc(uid).get();
+    final doc = await _firestore.collection('users').doc(uid).get(_serverOnly);
     final data = doc.data();
 
     if (data == null || data['friendCode'] == null) return null;
@@ -68,7 +71,10 @@ class FriendsRemoteDatasource {
 
   // Gets the uid that owns a friend code, or null if it does not exist.
   Future<String?> findUidByCode(String code) async {
-    final doc = await _firestore.collection('friendCodes').doc(code).get();
+    final doc = await _firestore
+        .collection('friendCodes')
+        .doc(code)
+        .get(_serverOnly);
     return doc.data()?['uid'] as String?;
   }
 
@@ -85,21 +91,24 @@ class FriendsRemoteDatasource {
 
   // Gets the uids of the user's friends.
   Future<List<String>> fetchFriendUids(String uid) async {
-    final snapshot = await _friendsRef(uid).get();
+    final snapshot = await _friendsRef(uid).get(_serverOnly);
     return snapshot.docs.map((doc) => doc.id).toList();
   }
 
   // Gets a friend's name, streak and pet level.
   Future<FriendModel> fetchFriend(String friendUid) async {
     final userRef = _firestore.collection('users').doc(friendUid);
-    final profileDoc = await userRef.get();
-    final progressDoc =
-        await userRef.collection('progress').doc('current').get();
+
+    // Read the profile and the progress at the same time
+    final docs = await Future.wait([
+      userRef.get(_serverOnly),
+      userRef.collection('progress').doc('current').get(_serverOnly),
+    ]);
 
     return FriendModel.fromFirestore(
       uid: friendUid,
-      profile: profileDoc.data() ?? {},
-      progress: progressDoc.data() ?? {},
+      profile: docs[0].data() ?? {},
+      progress: docs[1].data() ?? {},
     );
   }
 
