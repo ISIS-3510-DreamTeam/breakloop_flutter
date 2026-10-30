@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import '../data/activity_log_repository.dart';
 import '../data/activity_repository.dart';
 import '../data/context_provider.dart';
+import '../data/place_data_source.dart';
+import '../model/activity_category.dart';
 import '../model/activity_phase.dart';
 import '../model/activity_source.dart';
 import 'activity_detail_ui_state.dart';
@@ -15,6 +17,7 @@ class ActivityDetailViewModel extends ChangeNotifier {
   final ActivityRepository _activityRepository;
   final ActivityLogRepository _activityLogRepository;
   final ContextProvider _contextProvider;
+  final PlaceDataSource _placeDataSource;
 
   ActivityDetailUiState uiState = const ActivityDetailLoading();
 
@@ -28,6 +31,7 @@ class ActivityDetailViewModel extends ChangeNotifier {
     this._activityRepository,
     this._activityLogRepository,
     this._contextProvider,
+    this._placeDataSource,
   ) : _source = fromSuggestion ? ActivitySource.recommended : ActivitySource.browsed {
     _load();
   }
@@ -62,7 +66,7 @@ class ActivityDetailViewModel extends ChangeNotifier {
     uiState = current.copyWith(phase: ActivityPhase.running);
     notifyListeners();
 
-    _saveStart(current.activity.id, current.activity.durationMin);
+    _saveStart(current.activity.id, current.activity.category, current.activity.durationMin);
 
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       final content = _content;
@@ -84,9 +88,11 @@ class ActivityDetailViewModel extends ChangeNotifier {
     _complete(current);
   }
 
-  Future<void> _saveStart(String activityId, int durationMin) async {
+  //The log keeps the category and the place for BQ12
+  Future<void> _saveStart(String activityId, ActivityCategory category, int durationMin) async {
     final snapshot = await _contextProvider.getSnapshot(durationMin);
-    _logId = await _activityLogRepository.startLog(activityId, _source, snapshot);
+    final place = await _placeDataSource.getPlace();
+    _logId = await _activityLogRepository.startLog(activityId, category, _source, snapshot, place);
   }
 
   void _complete(ActivityDetailContent current) {

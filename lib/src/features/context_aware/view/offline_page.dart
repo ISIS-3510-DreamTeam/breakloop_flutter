@@ -11,8 +11,10 @@ import '../data/context_provider_impl.dart';
 import '../data/interests_data_source.dart';
 import '../data/location_data_source.dart';
 import '../data/permissions_data_source.dart';
+import '../data/place_data_source.dart';
 import '../data/weather_api.dart';
 import '../data/weather_repository_impl.dart';
+import '../model/place_label.dart';
 import '../model/recommend_activity_use_case.dart';
 import '../model/rules/default_scoring_rules.dart';
 import '../viewmodel/offline_ui_state.dart';
@@ -30,15 +32,18 @@ class OfflinePage extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) {
         final permissionsDataSource = PermissionsDataSource();
+        final activityLogRepository = ActivityLogRepositoryImpl();
         return OfflineViewModel(
           ActivityRepositoryImpl(ActivityCatalogDataSource()),
           ContextProviderImpl(
             InterestsDataSource(),
-            ActivityLogRepositoryImpl(),
+            activityLogRepository,
             WeatherRepositoryImpl(LocationDataSource(permissionsDataSource), WeatherApi()),
           ),
           const RecommendActivityUseCase(rules: DefaultScoringRules.all),
           permissionsDataSource,
+          PlaceDataSource(),
+          activityLogRepository,
         );
       },
       child: const _OfflineViewContent(),
@@ -92,6 +97,8 @@ class _OfflineViewContent extends StatelessWidget {
           onTimeSelected: vm.onAvailableTimeSelected,
         ),
         const SizedBox(height: 20),
+        _buildPlaceSelector(context, vm, state),
+        const SizedBox(height: 20),
         SuggestedCard(
           suggestion: state.suggestion,
           availableMin: state.availableMin,
@@ -133,6 +140,38 @@ class _OfflineViewContent extends StatelessWidget {
           BreakLoopChip(label: 'Enable location', selected: true, onTap: vm.requestLocationPermission),
         ],
       ),
+    );
+  }
+
+  //Where the user is, sent with the activity logs for BQ12. Same as PlaceSelector in the Kotlin app
+  Widget _buildPlaceSelector(BuildContext context, OfflineViewModel vm, OfflineContent state) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        //One line, like the Row in the Kotlin app
+        Row(
+          children: [
+            Text('Where are you?', style: textTheme.labelMedium),
+            for (final place in PlaceLabel.values) ...[
+              const SizedBox(width: 6),
+              BreakLoopChip(
+                label: place.name[0].toUpperCase() + place.name.substring(1),
+                selected: state.selectedPlace == place,
+                selectedColor: AppColors.fern,
+                small: true,
+                onTap: () => vm.onPlaceSelected(state.selectedPlace == place ? null : place),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Used anonymously to improve suggestions.',
+          style: textTheme.bodySmall?.copyWith(color: AppColors.neutral700),
+        ),
+      ],
     );
   }
 

@@ -13,6 +13,7 @@ import '../data/context_provider_impl.dart';
 import '../data/interests_data_source.dart';
 import '../data/location_data_source.dart';
 import '../data/permissions_data_source.dart';
+import '../data/place_data_source.dart';
 import '../data/weather_api.dart';
 import '../data/weather_repository_impl.dart';
 import '../model/activity_phase.dart';
@@ -43,6 +44,7 @@ class ActivityDetailPage extends StatelessWidget {
             activityLogRepository,
             WeatherRepositoryImpl(LocationDataSource(PermissionsDataSource()), WeatherApi()),
           ),
+          PlaceDataSource(),
         );
       },
       child: const _ActivityDetailViewContent(),
