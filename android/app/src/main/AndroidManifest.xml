@@ -13,7 +13,7 @@
         tools:ignore="ProtectedPermissions"/>
 
     <application
-        android:label="breakloop_flutter"
+        android:label="BreakLoop"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
