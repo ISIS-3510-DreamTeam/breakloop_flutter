@@ -69,18 +69,23 @@ class FocusViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Changes the selected soundscape
+  // Changes the selected soundscape and plays it immediately
   Future<void> selectSoundscape(Soundscape soundscape) async {
-      _state = _state.copyWith(activeSoundscape: soundscape);
-      notifyListeners();
+    _state = _state.copyWith(activeSoundscape: soundscape);
+    notifyListeners();
 
-      // Llama al servicio para que lo gestione en segundo plano y lo reproduzca
-      await _soundscapeService.playSoundscape(soundscape);
-    }
+    await _soundscapeService.playSoundscape(soundscape);
+  }
+
   // enables or disables the app blocker
   void toggleAppBlocker(bool enabled) {
     _state = _state.copyWith(isAppBlockerActive: enabled);
     notifyListeners();
+  }
+
+    // Stops the soundscape when leaving the Focus tab
+  Future<void> stopSoundscape() async {
+    await _soundscapeService.stopSound();
   }
 
   // Starts a new focus session
@@ -154,20 +159,24 @@ class FocusViewModel extends ChangeNotifier {
     );
   }
 
-  // Pauses the current session
+  // Pauses the current session and its sound
   void pauseSession() {
-    if (!_state.isTimerRunning) return;
+    if (!_state.isTimerRunning || _state.isTimerPaused) return;
 
     _state = _state.copyWith(isTimerPaused: true);
     notifyListeners();
+
+    unawaited(_soundscapeService.pauseSound());
   }
 
-  // Resumes the current session
+  // Resumes the current session and its sound
   void resumeSession() {
-    if (!_state.isTimerRunning) return;
+    if (!_state.isTimerRunning || !_state.isTimerPaused) return;
 
     _state = _state.copyWith(isTimerPaused: false);
     notifyListeners();
+
+    unawaited(_soundscapeService.resumeSound());
   }
 
   // Cancels the current session
@@ -175,12 +184,14 @@ class FocusViewModel extends ChangeNotifier {
     if (!_state.isTimerRunning) return;
 
     _saveSessionToStorage(SessionStatus.abandoned);
+    unawaited(stopSoundscape());
     _resetTimerState();
   }
 
   // Completes the current session
   void _completeFocusSession() {
     _saveSessionToStorage(SessionStatus.completed);
+    unawaited(stopSoundscape());
     _resetTimerState();
   }
 

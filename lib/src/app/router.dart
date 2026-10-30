@@ -12,7 +12,6 @@ import '../features/focus_session/view/focus_session_view.dart';
 import '../features/focus_session/viewmodel/focus_viewmodel.dart';
 import '../features/context_aware/view/offline_page.dart';
 import '../features/context_aware/view/activity_detail_page.dart';
-
 //Add here additional routes
 import '../core/navigation/home_page.dart';
 import '../core/navigation/section_placeholder_page.dart';
@@ -21,6 +20,8 @@ import '../core/navigation/section_placeholder_page.dart';
 
 GoRouter buildRouter(AuthRepository authRepository) {
   final authRefresh = GoRouterRefreshStream(authRepository.authStateChange);
+  final focusViewModel = FocusViewModel();
+
   const publicRoutes = ['/login', '/signup', '/password-reset'];
 
   return GoRouter(
@@ -59,14 +60,14 @@ GoRouter buildRouter(AuthRepository authRepository) {
       GoRoute(path: '/password-reset', builder: (_, _) => const PasswordResetPage()),
 
       StatefulShellRoute.indexedStack(
-          builder: (context, state, navigationShell) => MainShell(navigationShell: navigationShell),
+          builder: (context, state, navigationShell) => MainShell(navigationShell: navigationShell, focusViewModel: focusViewModel),
           branches: [
             StatefulShellBranch(routes: [
               GoRoute(path: '/home', builder: (_, _) => const HomePage()),
             ]),
             //The order of the branches must match the order of the navBar destinations in MainShell
             StatefulShellBranch(routes: [
-              GoRoute(path: '/focus', builder: (_, _) => FocusScreen(viewModel: FocusViewModel(),
+              GoRoute(path: '/focus', builder: (_, _) => FocusScreen(viewModel: focusViewModel,
     ),
   ),
 ]),

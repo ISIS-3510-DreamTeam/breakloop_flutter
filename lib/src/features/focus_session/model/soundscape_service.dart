@@ -37,11 +37,19 @@ Future<void> playSoundscape(Soundscape soundscape) async {
   }
 }
 
-  Future<void> stopSound() async {
-    await _audioPlayer.stop();
-  }
+    Future<void> pauseSound() async {
+      await _audioPlayer.pause();
+    }
 
-  Future<void> dispose() async {
-    await _audioPlayer.dispose();
-  }
+    Future<void> resumeSound() async {
+      await _audioPlayer.resume();
+    }
+
+    Future<void> stopSound() async {
+      await _audioPlayer.stop();
+    }
+
+    Future<void> dispose() async {
+      await _audioPlayer.dispose();
+    }
 }
