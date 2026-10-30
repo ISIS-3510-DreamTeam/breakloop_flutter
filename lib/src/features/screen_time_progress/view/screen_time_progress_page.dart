@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../viewmodel/screen_time_progress_viewmodel.dart';
 import '../../goals/viewmodel/goals_viewmodel.dart';
+import '../../context_aware/view/avoided_screen_time_card.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_button.dart';
@@ -150,6 +151,8 @@ class _ScreenTimeProgressPageState extends State<ScreenTimeProgressPage> with Wi
         ),
         const SizedBox(height: 24),
         _buildReductionCard(vm),
+        const SizedBox(height: 24),
+        const AvoidedScreenTimeCard(),
       ],
     );
   }

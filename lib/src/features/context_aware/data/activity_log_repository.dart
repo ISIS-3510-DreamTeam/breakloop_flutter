@@ -1,4 +1,5 @@
 import '../model/activity_category.dart';
+import '../model/activity_log_entry.dart';
 import '../model/activity_source.dart';
 import '../model/context_snapshot.dart';
 import '../model/place_label.dart';
@@ -19,6 +20,12 @@ abstract interface class ActivityLogRepository {
 
   //Ids of the last completed activities, most recent first
   Future<List<String>> getRecentActivityIds(int limit);
+
+  //Completed logs of the account that is logged in
+  Future<List<ActivityLogEntry>> getCompletedLogsOfCurrentUser();
+
+  //Emits every time a log is started or completed
+  Stream<void> watchChanges();
 
   //Sends the logs that the backend does not have yet. If it fails they stay queued for the next try
   Future<void> syncActivityLogs();

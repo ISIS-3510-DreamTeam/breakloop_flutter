@@ -19,6 +19,12 @@ class ActivityLogEntry {
   final PlaceLabel? placeLabel;
   //Suggestion interaction the log came from, or null
   final String? interactionId;
+  //Account that did the activity, so logs of different accounts on the same phone are not mixed.
+  //Null only in logs saved before it was stored
+  final String? userId;
+  //Screen time avoided during the activity (BQ6): its duration minus the time the phone was used.
+  //Calculated when the activity is completed
+  final int? avoidedScreenMs;
   //False until the backend has the latest version of the log
   final bool synced;
 
@@ -35,15 +41,17 @@ class ActivityLogEntry {
     required this.availableMin,
     required this.placeLabel,
     this.interactionId,
+    this.userId,
+    this.avoidedScreenMs,
     this.synced = false,
   });
 
   //Completing the log changes it, so it has to be synced again
-  ActivityLogEntry complete(DateTime completedAt, int xp) {
-    return copyWith(completedAt: completedAt, xp: xp, synced: false);
+  ActivityLogEntry complete(DateTime completedAt, int xp, int? avoidedScreenMs) {
+    return copyWith(completedAt: completedAt, xp: xp, avoidedScreenMs: avoidedScreenMs, synced: false);
   }
 
-  ActivityLogEntry copyWith({DateTime? completedAt, int? xp, bool? synced}) {
+  ActivityLogEntry copyWith({DateTime? completedAt, int? xp, int? avoidedScreenMs, bool? synced}) {
     return ActivityLogEntry(
       id: id,
       activityId: activityId,
@@ -57,6 +65,8 @@ class ActivityLogEntry {
       availableMin: availableMin,
       placeLabel: placeLabel,
       interactionId: interactionId,
+      userId: userId,
+      avoidedScreenMs: avoidedScreenMs ?? this.avoidedScreenMs,
       synced: synced ?? this.synced,
     );
   }
@@ -75,6 +85,8 @@ class ActivityLogEntry {
       'availableMin': availableMin,
       'placeLabel': placeLabel?.name,
       'interactionId': interactionId,
+      'userId': userId,
+      'avoidedScreenMs': avoidedScreenMs,
       'synced': synced,
     };
   }
@@ -96,6 +108,8 @@ class ActivityLogEntry {
       availableMin: json['availableMin'] as int,
       placeLabel: placeLabel == null ? null : PlaceLabel.values.byName(placeLabel),
       interactionId: json['interactionId'] as String?,
+      userId: json['userId'] as String?,
+      avoidedScreenMs: json['avoidedScreenMs'] as int?,
       synced: json['synced'] as bool? ?? false,
     );
   }
