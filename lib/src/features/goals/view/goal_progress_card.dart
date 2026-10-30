@@ -6,6 +6,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_button.dart';
 
+import '../model/streak_simulation_result.dart';
+
 
 
 class GoalProgressCard extends StatefulWidget {
@@ -65,22 +67,55 @@ class _SetupView extends StatefulWidget {
 }
 
 class _SetupViewState extends State<_SetupView> {
-  final _controller = TextEditingController(text: '120');
+  int _selectedMinutes = 120;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Text('No goal set yet. Enter daily limit (minutes):'),
-        TextField(controller: _controller, keyboardType: TextInputType.number),
-        const SizedBox(height: 16),
-        ElevatedButton(
-          onPressed: () => widget.onConfirm(int.tryParse(_controller.text) ?? 120),
-          child: const Text('Save goal'),
-        ),
-      ],
+    final textTheme = Theme.of(context).textTheme;
+    final h = _selectedMinutes ~/ 60;
+    final m = _selectedMinutes % 60;
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('SET DAILY GOAL', style: textTheme.labelLarge),
+          const SizedBox(height: 8),
+
+          Text(
+              '${h}h ${m.toString().padLeft(2, '0')}m',
+              style: textTheme.headlineMedium?.copyWith(fontSize: 20)
+          ),
+
+          const SizedBox(height: 4),
+          Text(
+            'Choose your daily screen time limit to start tracking.',
+            style: textTheme.bodyMedium?.copyWith(color: AppColors.darkCoffee),
+          ),
+
+          const SizedBox(height: 8),
+          Slider(
+            value: _selectedMinutes.toDouble(),
+            min: 15,
+            max: 720,
+            divisions: 47,
+            activeColor: AppColors.spicyPaprika,
+            onChanged: (value) => setState(() => _selectedMinutes = value.round()),
+          ),
+
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: AppButton(
+              label: 'SAVE GOAL',
+              icon: Icons.flag,
+              onPressed: () => widget.onConfirm(_selectedMinutes),
+              height: 40,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -91,13 +126,31 @@ class _PermissionView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Text('BreakLoop needs usage access to track your screen time.'),
-        const SizedBox(height: 12),
-        ElevatedButton(onPressed: onRequest, child: const Text('Grant access')),
-      ],
+    final textTheme = Theme.of(context).textTheme;
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('PERMISSION REQUIRED', style: textTheme.labelLarge),
+          const SizedBox(height: 8),
+          Text(
+            'BreakLoop needs usage access to track your screen time and calculate your streaks.',
+            style: textTheme.bodyMedium?.copyWith(color: AppColors.darkCoffee),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: AppButton(
+              label: 'GRANT ACCESS',
+              icon: Icons.lock_open,
+              onPressed: onRequest,
+              height: 40,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -147,7 +200,10 @@ class _ActiveViewState extends State<_ActiveView> {
               children: [
                 Text("TODAY'S SCREEN TIME", style: textTheme.labelLarge),
                 GestureDetector(
-                  onTap: () => setState(() => _isEditing = true),
+                  onTap: () {
+                    context.read<GoalsViewModel>().loadStreakSimulation();
+                    setState(() => _isEditing = true);
+                  },
                   child: const Icon(Icons.settings_outlined, size: 18, color: AppColors.darkCoffee),
                 )
               ],
@@ -204,13 +260,6 @@ class _ActiveViewState extends State<_ActiveView> {
       )
     );
   }
-
-  String _formatMinutes(int minutes) {
-    final h = minutes ~/ 60;
-    final m = minutes % 60;
-    if (h == 0) return '${m}m';
-    return '${h}h ${m}m';
-  }
 }
 
 
@@ -234,6 +283,7 @@ class _EditGoalViewState extends State<_EditGoalView> {
 
   @override
   Widget build(BuildContext context) {
+    final vm = context.watch<GoalsViewModel>();
     final textTheme = Theme.of(context).textTheme;
     final h = _selectedMinutes ~/ 60;
     final m = _selectedMinutes % 60;
@@ -254,6 +304,13 @@ class _EditGoalViewState extends State<_EditGoalView> {
               activeColor: AppColors.spicyPaprika,
               onChanged: (value) => setState(() => _selectedMinutes = value.round()),
             ),
+            _StreakForecast(
+              isLoading: vm.isSimulating,
+              simulation: vm.simulation,
+              selectedMinutes: _selectedMinutes,
+              onApplySuggestion: (value) => setState(() => _selectedMinutes= value.round())
+            ),
+            const SizedBox(height: 8),
             Text(
               'This will take effect tomorrow, to keep your streak fair.',
               style: textTheme.bodyMedium?.copyWith(fontSize: 11, color: AppColors.darkCoffee),
@@ -277,4 +334,88 @@ class _EditGoalViewState extends State<_EditGoalView> {
         )
     );
   }
+}
+
+class _StreakForecast extends StatelessWidget {
+  final bool isLoading;
+  final StreakSimulationResult? simulation;
+  final int selectedMinutes;
+  final void Function(int minutes) onApplySuggestion;
+
+  const _StreakForecast({
+    required this.isLoading,
+    required this.simulation,
+    required this.selectedMinutes,
+    required this.onApplySuggestion,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final smallStyle = textTheme.bodyMedium?.copyWith(fontSize: 12, color: AppColors.darkCoffee);
+
+    if (isLoading) {
+      return Row(
+        children: [
+          const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+          const SizedBox(width: 8),
+          Text('Simulating your next 30 days…', style: smallStyle),
+        ],
+      );
+    }
+
+    final sim = simulation;
+    if (sim == null || !sim.hasData) {
+      return Text('Not enough usage history yet to estimate your odds.', style: smallStyle);
+    }
+
+    final probability = sim.probabilityFor(selectedMinutes);
+    final suggested = sim.suggestedGoalMinutes;
+    final probColor = probability >= 0.7 ? AppColors.fern : AppColors.spicyPaprika;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text.rich(
+          TextSpan(
+            style: smallStyle,
+            children: [
+              const TextSpan(text: 'Chance of a 7-day streak: '),
+              TextSpan(
+                text: '${(probability * 100).round()}%',
+                style: TextStyle(color: probColor, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+        if (suggested == null)
+          Text('No goal up to 12h reaches a 70% chance.', style: smallStyle)
+        else
+          Row(
+            children: [
+              Text('Suggested: ${_formatMinutes(suggested)} (≥ 70%)', style: smallStyle),
+              if (suggested != selectedMinutes)
+                TextButton(
+                  onPressed: () => onApplySuggestion(suggested),
+                  style: TextButton.styleFrom(
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text('Use'),
+                ),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+//Util
+String _formatMinutes(int minutes) {
+  final h = minutes ~/ 60;
+  final m = minutes % 60;
+  if (h == 0) return '${m}m';
+  return '${h}h ${m}m';
 }
