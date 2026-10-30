@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
+//Card with a dark border and a solid pixel-art shadow
+//Highlighted cards use a big shadow (4) and secondary cards a small one (2)
 class AppCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
@@ -12,7 +14,7 @@ class AppCard extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(16),
     this.color = AppColors.snow,
-    this.shadowOffset = const Offset(3, 3),
+    this.shadowOffset = const Offset(4, 4),
   });
 
   @override
@@ -22,7 +24,7 @@ class AppCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.darkCoffee, width: 2.5),
+        border: Border.all(color: AppColors.darkCoffee, width: 2),
         boxShadow: [
           BoxShadow(
             color: AppColors.darkCoffee,

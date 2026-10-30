@@ -1,7 +1,8 @@
-
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
+import '../theme/app_colors.dart';
 import 'app_header.dart';
 import 'package:breakloop_flutter/src/features/focus_session/viewmodel/focus_viewmodel.dart';
 
@@ -44,67 +45,68 @@ class _MainShellState extends State<MainShell>
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    const titles = [
-      'HOME',
-      'FOCUS',
-      'STATS',
-      'OFFLINE',
-      'SOCIAL',
-    ];
+  //Label and pixel-art icon of each tab, in the same order as the router branches
+  static const _tabs = [
+    ('Home', 'hearth'),
+    ('Focus', 'focus'),
+    ('Stats', 'stats'),
+    ('Offline', 'offline'),
+    ('Friends', 'friends'),
+  ];
 
-    return Scaffold(
-      body: Column(
-        children: [
-          AppHeader(
-            title: titles[widget.navigationShell.currentIndex],
-          ),
-          Expanded(child: widget.navigationShell),
-        ],
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: widget.navigationShell.currentIndex,
-        onDestinationSelected: (index) {
-          // Stop the sound when leaving the Focus tab
-          if (widget.navigationShell.currentIndex == 1 && index != 1) {
-            widget.focusViewModel.stopSoundscape();
-          }
+ @override
+Widget build(BuildContext context) {
+  final textTheme = Theme.of(context).textTheme;
 
-          widget.navigationShell.goBranch(
-            index,
-            initialLocation:
-                index == widget.navigationShell.currentIndex,
-          );
-        },
-        destinations: const [
+  return Scaffold(
+    body: Column(
+      children: [
+        // The title is the tab name, also inside child routes
+        AppHeader(title: _tabs[widget.navigationShell.currentIndex].$1),
+        Expanded(child: widget.navigationShell),
+      ],
+    ),
+    bottomNavigationBar: NavigationBar(
+      backgroundColor: AppColors.navBackground,
+      indicatorColor: Colors.transparent,
+      selectedIndex: widget.navigationShell.currentIndex,
+
+      // Selected label in golden orange
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        final selected = states.contains(WidgetState.selected);
+        return textTheme.labelMedium?.copyWith(
+          color: selected
+              ? AppColors.goldenOrange
+              : AppColors.navUnselected,
+        );
+      }),
+
+      onDestinationSelected: (index) {
+        // Stop the sound when leaving the Focus tab
+        if (widget.navigationShell.currentIndex == 1 && index != 1) {
+          widget.focusViewModel.stopSoundscape();
+        }
+
+        widget.navigationShell.goBranch(
+          index,
+          initialLocation: index == widget.navigationShell.currentIndex,
+        );
+      },
+
+      destinations: [
+        for (final (label, icon) in _tabs)
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
+            icon: SvgPicture.asset(
+              'assets/icons/nav/$icon.svg',
+              height: 24,
+            ),
+            selectedIcon: SvgPicture.asset(
+              'assets/icons/nav/${icon}_selected.svg',
+              height: 24,
+            ),
+            label: label,
           ),
-          NavigationDestination(
-            icon: Icon(Icons.timer_outlined),
-            selectedIcon: Icon(Icons.timer),
-            label: 'Focus',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart),
-            label: 'Stats',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.wifi_off_outlined),
-            selectedIcon: Icon(Icons.wifi_off),
-            label: 'Offline',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.people_outline),
-            selectedIcon: Icon(Icons.people),
-            label: 'Social',
-          ),
-        ],
-      ),
-    );
-  }
-}
+      ],
+    ),
+  );
+}}

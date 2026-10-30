@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import '../../features/auth/data/auth_repository.dart';
 import '../../features/goals/viewmodel/goals_viewmodel.dart';
 import '../theme/app_colors.dart';
-import '../widgets/app_pill.dart';
+import '../theme/app_text_styles.dart';
 
-
-
+//Top bar shared by all the tabs
 class AppHeader extends StatelessWidget {
   final String title;
 
@@ -17,64 +17,73 @@ class AppHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
     final goalsVm = context.watch<GoalsViewModel>();
     final streak = goalsVm.goal.currentStreak;
 
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
-        color: AppColors.headerBackground,
-        border: Border(bottom: BorderSide(color: AppColors.darkCoffee, width: 3)),
+        color: AppColors.snow,
+        border: Border(bottom: BorderSide(color: AppColors.darkCoffee, width: 2)),
       ),
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-          child: Stack(
-            children: [
-              Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Image.asset('assets/images/board_logo.png', width: 56, height: 56),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('BREAKLOOP', style: textTheme.titleLarge?.copyWith(color: AppColors.spicyPaprika, letterSpacing: 3)),
-                          Text(title, style: textTheme.labelLarge?.copyWith(fontSize: 14)),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  //Static chips until the shield test and streaks are implemented
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      AppPill(label: '🛡 Shield Test'),
-                      SizedBox(width: 12),
-                      AppPill(label: '🔥 ${streak}d'),
-                    ],
-                  ),
-                ],
-              ),
-              Positioned(
-                  top: 55,
-                  right: -15,
-                  child: IconButton(
-                    icon: const Icon(Icons.logout),
-                    onPressed: () => context.read<AuthRepository>().signOut(),
-                  )
-              )
-            ],
-          )
+          padding: const EdgeInsets.only(left: 16, right: 4),
+          child: SizedBox(
+            height: 52,
+            child: Row(
+              children: [
+                Image.asset('assets/images/logo_name.png', width: 36, height: 36),
+                const SizedBox(width: 10),
+                Expanded(child: Text(title.toUpperCase(), style: AppTextStyles.monoLabel)),
+                //Static shield badge until the shield test is implemented
+                const _HeaderBadge(icon: 'assets/icons/shield.svg'),
+                const SizedBox(width: 6),
+                _HeaderBadge(icon: 'assets/icons/streak.svg', text: '${streak}d'),
+                IconButton(
+                  icon: const Icon(Icons.logout, size: 20, color: AppColors.neutral700),
+                  tooltip: 'Sign out',
+                  onPressed: () => context.read<AuthRepository>().signOut(),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
+class _HeaderBadge extends StatelessWidget {
+  final String icon;
+  final String? text;
+
+  const _HeaderBadge({required this.icon, this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(50),
+        border: Border.all(color: AppColors.darkCoffee, width: 1.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SvgPicture.asset(
+            icon,
+            width: 14,
+            height: 14,
+            colorFilter: const ColorFilter.mode(AppColors.darkCoffee, BlendMode.srcIn),
+          ),
+          if (text != null) ...[
+            const SizedBox(width: 4),
+            Text(text!, style: AppTextStyles.monoLabel),
+          ],
+        ],
+      ),
+    );
+  }
+}

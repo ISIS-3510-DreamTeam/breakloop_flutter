@@ -1,6 +1,9 @@
+import 'package:flutter/material.dart';
+
+import '../../../core/theme/app_colors.dart';
 import '../model/activity_category.dart';
 
-//Text and emoji used to show each category in the views
+//Text, color and icon used to show each category in the views
 String categoryLabel(ActivityCategory category) {
   switch (category) {
     case ActivityCategory.move:
@@ -14,15 +17,28 @@ String categoryLabel(ActivityCategory category) {
   }
 }
 
-String categoryEmoji(ActivityCategory category) {
+Color categoryColor(ActivityCategory category) {
   switch (category) {
     case ActivityCategory.move:
-      return '🏃';
+      return AppColors.fern100;
     case ActivityCategory.create:
-      return '🎨';
+      return AppColors.paprika100;
     case ActivityCategory.relax:
-      return '☕';
+      return AppColors.golden100;
     case ActivityCategory.socialize:
-      return '👥';
+      return AppColors.neutral100;
+  }
+}
+
+IconData categoryIcon(ActivityCategory category) {
+  switch (category) {
+    case ActivityCategory.move:
+      return Icons.directions_run_outlined;
+    case ActivityCategory.create:
+      return Icons.brush_outlined;
+    case ActivityCategory.relax:
+      return Icons.self_improvement_outlined;
+    case ActivityCategory.socialize:
+      return Icons.groups_outlined;
   }
 }

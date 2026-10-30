@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../core/navigation/auth_refresh_stream.dart';
 import '../core/navigation/splash_page.dart';
 import '../core/navigation/main_shell.dart';
@@ -12,9 +13,14 @@ import '../features/focus_session/view/focus_session_view.dart';
 import '../features/focus_session/viewmodel/focus_viewmodel.dart';
 import '../features/context_aware/view/offline_page.dart';
 import '../features/context_aware/view/activity_detail_page.dart';
+<<<<<<< HEAD
+=======
+import '../features/friends/view/friends_page.dart';
+import '../features/friends/viewmodel/friends_viewmodel.dart';
+
+>>>>>>> b78b54e5dcad8d71ff2ca1f98fdb84c6e1a77a03
 //Add here additional routes
 import '../core/navigation/home_page.dart';
-import '../core/navigation/section_placeholder_page.dart';
 //import '../core/navigation/home_placeholder_page.dart';
 
 
@@ -98,7 +104,14 @@ GoRouter buildRouter(AuthRepository authRepository) {
               ),
             ]),
             StatefulShellBranch(routes: [
-              GoRoute(path: '/social', builder: (_, _) => const SectionPlaceholderPage(title: 'Social')),
+              GoRoute(
+                path: '/social',
+                //The ViewModel is created when the user opens the tab, after logging in
+                builder: (_, _) => ChangeNotifierProvider(
+                  create: (_) => FriendsViewModel(),
+                  child: const FriendsPage(),
+                ),
+              ),
             ]),
 
             //add here all other branches accessed by the navBar

@@ -5,7 +5,6 @@ import '../viewmodel/focus_session_ui_state.dart';
 import '../viewmodel/focus_viewmodel.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_card.dart';
-import '../../../core/widgets/app_pill.dart';
 
 class FocusScreen extends StatefulWidget {
   /// ViewModel that controls the focus session
@@ -56,9 +55,6 @@ class _FocusScreenState extends State<FocusScreen> {
           backgroundColor: AppColors.snow,
           body: Column(
             children: [
-              // Show the header only before the session starts
-              if (!state.isTimerRunning) _buildHeader(context),
-
               Expanded(
                 // Show the active session or the setup screen
                 child: state.isTimerRunning
@@ -82,72 +78,6 @@ class _FocusScreenState extends State<FocusScreen> {
   }
 
   // Builds the header shown before starting a focus session
-  Widget _buildHeader(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        color: AppColors.headerBackground,
-        border: Border(
-          bottom: BorderSide(
-            color: AppColors.darkCoffee,
-            width: 3,
-          ),
-        ),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset(
-                    'assets/images/board_logo.png',
-                    width: 56,
-                    height: 56,
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'BREAKLOOP',
-                        style: textTheme.titleLarge?.copyWith(
-                          color: AppColors.spicyPaprika,
-                          letterSpacing: 3,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'FOCUS SETUP',
-                        style: textTheme.labelLarge?.copyWith(
-                          fontSize: 14,
-                          color: AppColors.darkCoffee,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  AppPill(label: '🛡 Shield Test'),
-                  SizedBox(width: 12),
-                  AppPill(label: '🔥 12d'),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 // Focus session setup screen
@@ -176,7 +106,6 @@ class FocusSetupContent extends StatelessWidget {
         // Introduction card
         AppCard(
           color: Colors.white,
-          shadowOffset: const Offset(0, 4),
           padding: const EdgeInsets.symmetric(
             vertical: 20,
             horizontal: 16,
@@ -316,7 +245,6 @@ class FocusSetupContent extends StatelessWidget {
         // Optional focus goal
         AppCard(
           color: Colors.white,
-          shadowOffset: const Offset(0, 4),
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -338,7 +266,7 @@ class FocusSetupContent extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   border: Border.all(
-                    color: AppColors.darkCoffee.withOpacity(0.3),
+                    color: AppColors.darkCoffee.withValues(alpha: 0.3),
                     width: 1.5,
                   ),
                   borderRadius: BorderRadius.circular(10),
@@ -377,7 +305,6 @@ class FocusSetupContent extends StatelessWidget {
         // Soundscape options
         AppCard(
           color: Colors.white,
-          shadowOffset: const Offset(0, 4),
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -436,7 +363,6 @@ class FocusSetupContent extends StatelessWidget {
         // App blocker option
         AppCard(
           color: Colors.white,
-          shadowOffset: const Offset(0, 4),
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
@@ -460,7 +386,7 @@ class FocusSetupContent extends StatelessWidget {
                     Text(
                       '10-second breath challenge on Instagram/TikTok',
                       style: textTheme.bodySmall?.copyWith(
-                        color: AppColors.darkCoffee.withOpacity(0.7),
+                        color: AppColors.darkCoffee.withValues(alpha: 0.7),
                         fontSize: 11,
                       ),
                     ),
@@ -745,7 +671,7 @@ class ActiveFocusContent extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: progress,
                   backgroundColor: Colors.transparent,
-                  color: AppColors.spicyPaprika.withOpacity(0.7),
+                  color: AppColors.spicyPaprika.withValues(alpha: 0.7),
                 ),
               ),
             ),
@@ -862,7 +788,7 @@ class SoundOptionButton extends StatelessWidget {
           border: Border.all(
             color: selected
                 ? AppColors.spicyPaprika
-                : AppColors.darkCoffee.withOpacity(0.3),
+                : AppColors.darkCoffee.withValues(alpha: 0.3),
             width: selected ? 2 : 1.5,
           ),
         ),
