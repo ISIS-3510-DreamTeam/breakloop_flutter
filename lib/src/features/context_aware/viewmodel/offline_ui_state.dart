@@ -1,5 +1,6 @@
 import '../model/activity_category.dart';
 import '../model/offline_activity.dart';
+import '../model/place_label.dart';
 import '../model/recommendation.dart';
 
 sealed class OfflineUiState {
@@ -21,6 +22,8 @@ class OfflineContent extends OfflineUiState {
   final ActivityCategory? selectedCategory;
   //True while the app cannot use the location to check the weather
   final bool needsLocationPermission;
+  //Place chosen by the user, or null if they did not choose one
+  final PlaceLabel? selectedPlace;
 
   const OfflineContent({
     required this.suggestion,
@@ -29,5 +32,6 @@ class OfflineContent extends OfflineUiState {
     required this.activities,
     required this.selectedCategory,
     required this.needsLocationPermission,
+    required this.selectedPlace,
   });
 }

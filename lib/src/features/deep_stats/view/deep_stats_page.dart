@@ -24,6 +24,7 @@ class _DeepStatsViewContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<StatisticsViewModel>();
+    final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
       backgroundColor: AppColors.snow,
@@ -33,6 +34,45 @@ class _DeepStatsViewContent extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(16.0),
               children: [
+                // Banner dinámico de conectividad (Sin internet / Conexión restaurada)
+                if (vm.isOffline) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFDE8E4),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.spicyPaprika.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      'No internet connection',
+                      textAlign: TextAlign.center,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: AppColors.spicyPaprika,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ] else if (vm.showRestoredBanner) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFDE8E4),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.spicyPaprika.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      'Internet connection restored',
+                      textAlign: TextAlign.center,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: AppColors.spicyPaprika,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+
                 _buildSubHeader(context),
                 const SizedBox(height: 16),
                 _buildMindfulUnlockCard(context, vm),
@@ -74,7 +114,6 @@ class _DeepStatsViewContent extends StatelessWidget {
 
     return AppCard(
       color: Colors.white,
-      shadowOffset: const Offset(0, 4),
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -147,7 +186,6 @@ class _DeepStatsViewContent extends StatelessWidget {
 
     return AppCard(
       color: Colors.white,
-      shadowOffset: const Offset(0, 4),
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

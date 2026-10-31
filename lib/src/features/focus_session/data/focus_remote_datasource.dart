@@ -20,8 +20,8 @@ class FocusRemoteDatasource {
     await _firestore
         .collection('users')
         .doc(session.userId)
-        .collection('focus_sessions')
-        .doc(session.sessionId)
+        .collection('focusSessions')
+        .doc(session.id)
         .set(session.toFirestore());
   }
 
@@ -32,7 +32,7 @@ class FocusRemoteDatasource {
     final snapshot = await _firestore
         .collection('users')
         .doc(userId)
-        .collection('focus_sessions')
+        .collection('focusSessions')
         .orderBy('startedAt', descending: true)
         .get();
 

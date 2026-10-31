@@ -13,7 +13,7 @@
         tools:ignore="ProtectedPermissions"/>
 
     <application
-        android:label="breakloop_flutter"
+        android:label="BreakLoop"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -42,6 +42,11 @@
     </application>
 
     <queries>
+        <!-- Lets the app see the launcher apps, so the user can flag them (Android 11+ package visibility) -->
+        <intent>
+            <action android:name="android.intent.action.MAIN"/>
+            <category android:name="android.intent.category.LAUNCHER"/>
+        </intent>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

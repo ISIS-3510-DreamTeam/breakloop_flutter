@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../features/focus_session/data/focus_session_repository.dart';
+import '../features/pet/data/pet_repository.dart';
+import '../features/pet/data/pet_xp_source.dart';
+import '../features/pet/viewmodel/pet_viewmodel.dart';
 import 'router.dart';
 
 import 'theme.dart';
@@ -10,16 +14,16 @@ import '../features/auth/viewmodel/login_viewmodel.dart';
 import '../features/auth/viewmodel/signup_viewmodel.dart';
 import '../features/auth/viewmodel/password_reset_viewmodel.dart';
 import '../features/screen_time_progress/data/screen_time_repository.dart';
-import '../features/screen_time_progress/data/mock_screen_time_repository.dart';
-import '../features/screen_time_progress/data/usage_stats_screen_time_repository.dart';
 import '../features/screen_time_progress/viewmodel/screen_time_progress_viewmodel.dart';
 import '../features/goals/data/goals_repository.dart';
 import '../features/goals/viewmodel/goals_viewmodel.dart';
-
-//Source of the screen-time data:
-//false -> mock data (works on any device or emulator)
-//true  -> real usage of the phone (asks the user for the PACKAGE_USAGE_STATS permission)
-const bool useRealScreenTime = true;
+import '../features/flagged_apps/data/flagged_apps_repository.dart';
+import '../features/flagged_apps/viewmodel/flagged_apps_viewmodel.dart';
+import '../features/context_aware/data/activity_log_repository_impl.dart';
+import '../features/context_aware/viewmodel/avoided_screen_time_viewmodel.dart';
+import '../features/context_aware/viewmodel/active_activity_viewmodel.dart';
+import '../features/context_aware/data/activity_repository_impl.dart';
+import '../features/context_aware/data/activity_catalog_data_source.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -32,18 +36,36 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (ctx) => LoginViewModel(ctx.read<AuthRepository>())),
         ChangeNotifierProvider(create: (ctx) => SignupViewModel(ctx.read<AuthRepository>())),
         ChangeNotifierProvider(create: (ctx) => PasswordResetViewModel(ctx.read<AuthRepository>())),
-        //Screen-time source, chosen with useRealScreenTime
-        Provider<ScreenTimeRepository>(create: (_) {
-          if (useRealScreenTime) {
-            return UsageStatsScreenTimeRepository();
-          } else {
-            return MockScreenTimeRepository();
-          }
-        }),
+        //Real usage of the phone (asks the user for the PACKAGE_USAGE_STATS permission)
+        Provider(create: (_) => ScreenTimeRepository(), dispose: (_, repository) => repository.dispose()),
         ChangeNotifierProvider(create: (ctx) => ScreenTimeProgressViewModel(ctx.read<ScreenTimeRepository>())..load()),
         Provider(create: (_) => GoalsRepository()),
         ChangeNotifierProvider(
           create: (ctx) => GoalsViewModel(ctx.read<GoalsRepository>(), ctx.read<ScreenTimeRepository>()),
+        ),
+        //Shared by the flagged apps screen and the card in Stats
+        Provider(
+          create: (ctx) => FlaggedAppsRepository(ctx.read<ScreenTimeRepository>()),
+          dispose: (_, repository) => repository.dispose()),
+        ChangeNotifierProvider(create: (ctx) => FlaggedAppsViewModel(ctx.read<FlaggedAppsRepository>())),
+        //Screen time avoided with the suggested activities (BQ6), shown in Stats
+        ChangeNotifierProvider(create: (_) => AvoidedScreenTimeViewModel(ActivityLogRepositoryImpl())),
+        //Activity in progress, shown in a banner under the header
+        ChangeNotifierProvider(
+          create: (_) => ActiveActivityViewModel(ActivityLogRepositoryImpl(), ActivityRepositoryImpl(ActivityCatalogDataSource())),
+        ),
+        ChangeNotifierProvider(
+          create: (_) {
+            final xp = PetXpSource(
+              activityLogs: ActivityLogRepositoryImpl(),
+              focusSessions: FocusSessionRepository(),
+            );
+            return PetViewModel(
+              repository: PetRepository(),
+              observeActivityXpSince: xp.observeActivityXpSince,
+              observeFocusXpSince: xp.observeFocusXpSince,
+            );
+          },
         ),
       ],
       child: const _RouterApp(),

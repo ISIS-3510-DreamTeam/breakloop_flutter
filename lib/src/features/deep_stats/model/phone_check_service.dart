@@ -6,21 +6,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../data/accelerometer_adapter.dart';
 import '../data/phone_check_repository.dart';
 
-
 class PhoneCheckService {
-
-
   /// Adapter used to receive accelerometer data
   final IAccelerometerService _accelerometerAdapter;
 
-  ///Repository used to save and retrieve phone check records
+  /// Repository used to save and retrieve phone check records
   final PhoneCheckRepository _repository;
 
-  //7 Minimum acceleration needed to detect a phone pickup
+  // Minimum acceleration needed to detect a phone pickup
   final double threshold;
 
   /// Baseline number of phone pickups used for comparison
-  static const int baselinePickups = 60;
+  static const int baselinePickups = 84;
 
   // Time of the last detected phone pickup.
   DateTime _lastDetectionTime = DateTime.now();
@@ -47,7 +44,19 @@ class PhoneCheckService {
     this._accelerometerAdapter,
     this._repository, {
     this.threshold = 12.0,
-  });
+  }) {
+    // Try to synchronize pending pickups when the service starts.
+    unawaited(_syncPendingPickups());
+  }
+
+  // Synchronizes pending pickups without interrupting sensor detection.
+  Future<void> _syncPendingPickups() async {
+    try {
+      await _repository.syncUnsyncedPickups();
+    } catch (_) {
+      // Keep local records if synchronization fails.
+    }
+  }
 
   // Stream that detects when a phone pickup happens
   Stream<bool> get onPhoneCheckDetected {
@@ -75,8 +84,6 @@ class PhoneCheckService {
 
       // Detect a strong or quick movement that could mean a phone pickup
       if (magnitude > threshold) {
-
-        
         // Avoid counting multiple pickups too close together.
         if (now.difference(_lastDetectionTime).inMilliseconds >= 1500) {
           _lastDetectionTime = now;
@@ -84,10 +91,17 @@ class PhoneCheckService {
           _lastMovementTime = now;
           _isCurrentlyPickedUp = true;
 
-          // Save the pickup time
-          await _repository.savePickup(now);
+          // ⚡️ INSTANTÁNEO: Guardamos localmente el pickup de inmediato
+          // para que el contador visual suba sin demoras.
+          await _repository.savePickup(
+            timestamp: now,
+            isIntentional: false, // Estado provisional
+          );
 
-          // Start checking if the pickup is intentional
+          // Notificamos a la UI para actualización inmediata del contador
+          _updateController.add(null);
+
+          // Iniciamos la evaluación de intencionalidad (5 segundos)
           _startIntentionalityTimer();
 
           return true;
@@ -107,7 +121,7 @@ class PhoneCheckService {
           final secondsElapsed =
               now.difference(_pickupStartTime!).inSeconds;
 
-          // If the phone becomes still before 5 seconds, it is impulsive
+          // If the phone becomes still before 5 seconds, it is impulsive (not mindful)
           if (secondsElapsed < 5) {
             _intentionalityTimer?.cancel();
             _isCurrentlyPickedUp = false;
@@ -130,7 +144,7 @@ class PhoneCheckService {
     _intentionalityTimer =
         Timer(const Duration(seconds: 5), () async {
       if (_isCurrentlyPickedUp) {
-        // If the phone is still being used after 5 seconds, count it as mindful
+        // If the phone is still being used after 5 seconds, count it as mindful (intentional)
         await _registerUnlockType(isMindful: true);
 
         _isCurrentlyPickedUp = false;
@@ -142,7 +156,7 @@ class PhoneCheckService {
     });
   }
 
-  // Saves the number of mindful and impulsive unlocks
+  // Saves the number of mindful and impulsive unlocks locally and checks batch sync
   Future<void> _registerUnlockType({
     required bool isMindful,
   }) async {
@@ -157,6 +171,16 @@ class PhoneCheckService {
     } else {
       impulsive++;
       await prefs.setInt('impulsive_count', impulsive);
+    }
+
+    // 💡 CLAVE: Actualizamos el registro que guardamos previamente con el valor REAL
+    await _repository.updateLastPickupIntentionality(isMindful);
+
+    // Verificamos si ya se acumuló el lote de 10 pendientes para Firebase
+    try {
+      await _repository.checkAndSyncBatch();
+    } catch (_) {
+      // Si no hay red, se queda localmente en SharedPreferences
     }
   }
 

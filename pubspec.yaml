@@ -31,6 +31,7 @@ dependencies:
   flutter:
     sdk: flutter
 
+
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
@@ -44,6 +45,12 @@ dependencies:
   cloud_firestore: ^6.10.0
   geolocator: ^14.1.1
   http: ^1.6.0
+  connectivity_plus: ^7.3.1
+  path_provider: ^2.1.2
+  audioplayers: ^6.0.0
+  flutter_svg: ^2.3.2
+  sqflite: ^2.4.5
+  workmanager: ^0.10.10
 
 dev_dependencies:
   flutter_test:
@@ -55,10 +62,16 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
-
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/images/board_logo.png"
+  adaptive_icon_background: "#FFF8F6"
+  adaptive_icon_foreground: "assets/icons/app_icon_foreground.png"
 # The following section is specific to Flutter packages.
 flutter:
 
@@ -71,6 +84,9 @@ flutter:
   assets:
     - assets/images/
     - assets/data/
+    - assets/icons/nav/
+    - assets/icons/shield.svg
+    - assets/icons/streak.svg
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
@@ -98,3 +114,4 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+

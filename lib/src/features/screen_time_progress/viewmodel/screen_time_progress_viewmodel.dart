@@ -36,6 +36,30 @@ class ScreenTimeProgressViewModel extends ChangeNotifier {
     }
   }
 
+  //Minutes of screen time of today, or null if there is no data for today
+  int? get todayMinutes {
+    final week = currentWeek;
+    final now = DateTime.now();
+    if (week == null || week.weekStart != _sundayOf(now)) {
+      return null;
+    }
+    return week.dailyMinutes[now.weekday % 7];
+  }
+
+  //Change of the current week against the week before, in %. A positive value means usage increased.
+  //It is null when there is no previous week to compare
+  int? get changeVsLastWeekPercent {
+    //The week before must be the previous calendar week, not an older one
+    if (weeks.length < 2 || weeks[weeks.length - 2].weekNumber != currentWeek!.weekNumber - 1) {
+      return null;
+    }
+    final previous = weeks[weeks.length - 2].averageDailyMinutes;
+    if (previous == 0) {
+      return null;
+    }
+    return ((currentWeek!.averageDailyMinutes - previous) / previous * 100).round();
+  }
+
   Future<void> load() async {
     status = ScreenTimeProgressStatus.loading;
     notifyListeners();
@@ -47,15 +71,27 @@ class ScreenTimeProgressViewModel extends ChangeNotifier {
         return;
       }
 
-      final records = await _repository.getDailyScreenTime();
-      weeks = _groupByWeek(records);
-      reductionPercent = _computeReduction();
-      status = ScreenTimeProgressStatus.loaded;
+      //The saved days are shown right away, while Android is read again
+      if (weeks.isEmpty) {
+        final stored = await _repository.getStoredDailyScreenTime();
+        if (stored.isNotEmpty) {
+          _show(stored);
+          notifyListeners();
+        }
+      }
+
+      _show(await _repository.getDailyScreenTime());
 
     } catch (_) {
       status = ScreenTimeProgressStatus.error;
     }
     notifyListeners();
+  }
+
+  void _show(List<DailyScreenTime> records) {
+    weeks = _groupByWeek(records);
+    reductionPercent = _computeReduction();
+    status = ScreenTimeProgressStatus.loaded;
   }
 
   //Send the user to grant the permission. The view calls load() again when the user comes back to the app.
@@ -90,6 +126,7 @@ class ScreenTimeProgressViewModel extends ChangeNotifier {
       for (final entry in daysByWeek.entries)
         WeeklyScreenTime(
           weekNumber: entry.key + 1,
+          weekStart: firstSunday.add(Duration(days: entry.key * 7)),
           averageDailyMinutes: _averageOfDaysWithData(entry.value),
           dailyMinutes: entry.value,
         ),
