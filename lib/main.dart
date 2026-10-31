@@ -1,5 +1,7 @@
+import 'package:breakloop_flutter/src/core/background/background_dispatcher.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:workmanager/workmanager.dart';
 import 'firebase_options.dart';
 import 'src/app/app.dart';
 import 'package:flutter/services.dart';
@@ -18,6 +20,8 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  await Workmanager().initialize(backgroundDispatcher);
 
   runApp(const MyApp());
 }
