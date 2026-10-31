@@ -10,7 +10,7 @@ class FlaggedAppsLocalDatasource {
   Future<Database> _db() async {
     return _database ??= await openDatabase(
       '${await getDatabasesPath()}/flagged_apps.db',
-      version: 2,
+      version: 3,
       onCreate: (db, version) async {
         await db.execute(
           'CREATE TABLE flagged_apps ('
@@ -20,21 +20,11 @@ class FlaggedAppsLocalDatasource {
           'isSynced INTEGER NOT NULL DEFAULT 0, '
           'isDeleted INTEGER NOT NULL DEFAULT 0)',
         );
-        //Usage of each day ("yyyy-MM-dd"): total screen time and time in the flagged apps
-        await db.execute(
-          'CREATE TABLE daily_flagged_time ('
-          'date TEXT PRIMARY KEY, '
-          'flaggedTimeMs INTEGER NOT NULL, '
-          'screenTimeMs INTEGER NOT NULL DEFAULT 0, '
-          'updatedAt INTEGER NOT NULL DEFAULT 0, '
-          'isSynced INTEGER NOT NULL DEFAULT 0)',
-        );
       },
-      //Version 2 adds the fields that the backend usage endpoint needs
+      //The daily usage moved to the screen time feature (daily_usage.db)
       onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 2) {
-          await db.execute('ALTER TABLE daily_flagged_time ADD COLUMN screenTimeMs INTEGER NOT NULL DEFAULT 0');
-          await db.execute('ALTER TABLE daily_flagged_time ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0');
+        if (oldVersion < 3) {
+          await db.execute('DROP TABLE IF EXISTS daily_flagged_time');
         }
       },
     );
@@ -99,34 +89,5 @@ class FlaggedAppsLocalDatasource {
     } else {
       await db.update('flagged_apps', {'isSynced': 1}, where: 'packageName = ?', whereArgs: [packageName]);
     }
-  }
-
-  Future<void> saveDailyUsage(String date, int screenTimeMs, int flaggedTimeMs, int updatedAt) async {
-    await (await _db()).insert(
-      'daily_flagged_time',
-      {
-        'date': date,
-        'flaggedTimeMs': flaggedTimeMs,
-        'screenTimeMs': screenTimeMs,
-        'updatedAt': updatedAt,
-        'isSynced': 0,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-  }
-
-  //Days whose usage has not reached the backend yet
-  Future<List<Map<String, Object?>>> getUnsyncedDailyUsage() async {
-    return (await _db()).query('daily_flagged_time', where: 'isSynced = 0');
-  }
-
-  //Only marks the day if it did not change while it was being sent (same as markSynced in the Kotlin app)
-  Future<void> markDailyUsageSynced(String date, int updatedAt) async {
-    await (await _db()).update(
-      'daily_flagged_time',
-      {'isSynced': 1},
-      where: 'date = ? AND updatedAt = ?',
-      whereArgs: [date, updatedAt],
-    );
   }
 }

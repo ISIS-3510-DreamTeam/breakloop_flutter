@@ -4,6 +4,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../screen_time_progress/data/screen_time_repository.dart';
 import '../model/calculate_flagged_time_use_case.dart';
 import '../model/flagged_app.dart';
 import '../model/installed_app.dart';
@@ -17,6 +18,8 @@ class FlaggedAppsRepository {
   final FlaggedAppsLocalDatasource _localDatasource;
   final FlaggedAppsRemoteDatasource _remoteDatasource;
   final InstalledAppsDataSource _installedAppsDataSource;
+  //Owner of the daily usage table, where the flagged time of each day is saved and synced
+  final ScreenTimeRepository _screenTimeRepository;
   final CalculateFlaggedTimeUseCase _calculateFlaggedTime;
   final FirebaseAuth _auth;
   final Connectivity _connectivity;
@@ -25,7 +28,8 @@ class FlaggedAppsRepository {
   final _flaggedController = StreamController<List<FlaggedApp>>.broadcast();
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
-  FlaggedAppsRepository({
+  FlaggedAppsRepository(
+    this._screenTimeRepository, {
     FlaggedAppsLocalDatasource? localDatasource,
     FlaggedAppsRemoteDatasource? remoteDatasource,
     InstalledAppsDataSource? installedAppsDataSource,
@@ -73,29 +77,21 @@ class FlaggedAppsRepository {
     await _afterChange();
   }
 
-  //Recalculates today's screen time and the time spent in the flagged apps and saves them locally
+  //Recalculates the time spent today in the flagged apps. It is saved and synced with the rest of the day's usage
   Future<void> refreshTodayFlaggedTime() async {
     final usage = await _installedAppsDataSource.getTodayAppUsage();
     //Without the usage permission there is nothing to measure
     if (usage.isEmpty) return;
 
-    //Like the Kotlin app, the screen time only counts the launcher apps
-    final included = {for (final app in await getInstalledApps()) app.packageName};
-    var screenTimeMs = 0;
-    usage.forEach((packageName, ms) {
-      if (included.contains(packageName)) screenTimeMs += ms;
-    });
     final flaggedTimeMs = _calculateFlaggedTime.getFlaggedAppTime(usage, await getFlaggedApps());
-    await _localDatasource.saveDailyUsage(_todayKey(), screenTimeMs, flaggedTimeMs, DateTime.now().millisecondsSinceEpoch);
-    debugPrint('[FlaggedAppsRepository] today screenTimeMs=$screenTimeMs flaggedTimeMs=$flaggedTimeMs');
+    await _screenTimeRepository.saveFlaggedTime(_todayKey(), flaggedTimeMs);
+    debugPrint('[FlaggedAppsRepository] today flaggedTimeMs=$flaggedTimeMs');
   }
 
-  //Sends the changes that have not been synced: the flagged apps to Firestore and the daily usage to the backend.
-  //If it fails, they stay queued for the next try
+  //Sends to Firestore the changes that have not been synced. If it fails, they stay queued for the next try
   Future<void> syncPending() async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-    final uid = user.uid;
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
 
     try {
       for (final (app, deleted) in await _localDatasource.getUnsyncedApps()) {
@@ -105,21 +101,6 @@ class FlaggedAppsRepository {
           await _remoteDatasource.saveFlaggedApp(uid, app);
         }
         await _localDatasource.markAppSynced(app.packageName, deleted: deleted);
-      }
-      for (final day in await _localDatasource.getUnsyncedDailyUsage()) {
-        final date = day['date'] as String;
-        final updatedAt = day['updatedAt'] as int;
-        //Same body as UsageDto in the Kotlin app. Pickups and unlocks are not measured, Kotlin also sends 0
-        await _remoteDatasource.postDailyUsage(user, {
-          'date': date,
-          'screenTimeMs': day['screenTimeMs'],
-          'pickups': 0,
-          'unlocks': 0,
-          'isPartial': false,
-          'updatedAt': updatedAt,
-          'flaggedTimeMs': day['flaggedTimeMs'],
-        });
-        await _localDatasource.markDailyUsageSynced(date, updatedAt);
       }
     } catch (e) {
       debugPrint('[FlaggedAppsRepository] sync failed, will retry later: $e');

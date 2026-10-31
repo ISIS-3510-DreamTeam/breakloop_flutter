@@ -71,15 +71,27 @@ class ScreenTimeProgressViewModel extends ChangeNotifier {
         return;
       }
 
-      final records = await _repository.getDailyScreenTime();
-      weeks = _groupByWeek(records);
-      reductionPercent = _computeReduction();
-      status = ScreenTimeProgressStatus.loaded;
+      //The saved days are shown right away, while Android is read again
+      if (weeks.isEmpty) {
+        final stored = await _repository.getStoredDailyScreenTime();
+        if (stored.isNotEmpty) {
+          _show(stored);
+          notifyListeners();
+        }
+      }
+
+      _show(await _repository.getDailyScreenTime());
 
     } catch (_) {
       status = ScreenTimeProgressStatus.error;
     }
     notifyListeners();
+  }
+
+  void _show(List<DailyScreenTime> records) {
+    weeks = _groupByWeek(records);
+    reductionPercent = _computeReduction();
+    status = ScreenTimeProgressStatus.loaded;
   }
 
   //Send the user to grant the permission. The view calls load() again when the user comes back to the app.
