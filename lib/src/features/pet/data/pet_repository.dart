@@ -31,13 +31,13 @@ class PetRepository {
 
   Future<Uint8List?> getImageBytes(PetMood mood) => _imageStorage.readImageBytes(mood);
 
-  /// Se llama desde la UI: engancha el aviso del worker (otro isolate) y refresca.
+  // called from the ui
   void startListeningToBackground() =>
       PetSyncWorker.listenForUiRefresh(_localStore.notifyChanged);
 
   void notifyExternalChange() => _localStore.notifyChanged();
 
-  /// Guarda la elección y deja que el worker la aplique apenas haya internet.
+  // Save the choice and let the worker apply it when available
   Future<void> changePet(String petId) async {
     await _localStore.setPendingPet(petId);
     await PetSyncWorker.schedule();
@@ -49,10 +49,10 @@ class PetRepository {
     }
   }
 
-  /// Re-sincroniza cualquier cosa pendiente.
+  //Re-Synchronize
   Future<void> scheduleSync() => PetSyncWorker.schedule();
 
-  /// Catálogo del servidor si se puede; si no, la última copia guardada.
+  //Catalog from the server if possible; else the last saved copy
   Future<List<PetDto>> getCatalog() async {
     try {
       final pets = await _api.getPets();
@@ -66,21 +66,20 @@ class PetRepository {
     }
   }
 
-  /// Solo lo llama PetSyncWorker, que solo corre cuando hay internet.
+  //called by petworker, which runs only when there is an internet connection
   Future<void> syncWithServer() async {
-    // 1. Aplicar el cambio de mascota pendiente
+    // 1. apply the pending pet change
     final pendingId = (await _localStore.getState()).pendingPetId;
     if (pendingId != null) {
       await _downloadPet(pendingId);
       await _localStore.finishPetChange(pendingId);
     }
 
-    // 2. Enviar mascota y mood actuales al backend (si están desactualizados)
+    // 2. Send pet and current mood to the backend (if outdated)
     final state = await _localStore.getState();
     final petId = state.currentPetId;
     if (petId == null || state.synced) return;
 
-    // En un isolate de fondo, currentUser puede ser null al inicio: se espera la restauración.
     final user = await FirebaseAuth.instance.authStateChanges().first;
     final uid = user?.uid;
     if (uid == null) return;
@@ -103,7 +102,7 @@ class PetRepository {
     final catalog = await getCatalog();
     final pet = catalog.firstWhere((p) => p.id == petId);
 
-    // Descarga a carpeta temporal y se intercambia al final (cambio atómico).
+    // Download to a temporary folder and exchange with on-device files
     await _imageStorage.startDownload();
     for (final entry in pet.images.entries) {
       final bytes = await _api.downloadFile(entry.value);

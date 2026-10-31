@@ -19,10 +19,10 @@ class PetSyncWorker {
 
   static ReceivePort? _uiPort;
 
-  // ---- Lado UI ----
+  // ---- UI side ----
 
-  /// Encola el trabajo: corre cuando hay internet, reemplaza uno pendiente,
-  /// y si falla reintenta con backoff lineal de 10 s.
+  //Enqueue work: runs when there is internet available, substitutes a pending one and
+  //on fail retries with lineal backoff of 10 s
   static Future<void> schedule() {
     return Workmanager().registerOneOffTask(
       uniqueName,
@@ -34,9 +34,12 @@ class PetSyncWorker {
     );
   }
 
-  /// Registra un puerto para que el worker (otro isolate) avise a la UI.
+
   static void listenForUiRefresh(VoidCallback onRefresh) {
-    stopListeningForUiRefresh();
+
+    IsolateNameServer.removePortNameMapping(_uiPortName);
+    _uiPort?.close();
+
     final port = ReceivePort();
     IsolateNameServer.registerPortWithName(port.sendPort, _uiPortName);
     port.listen((_) => onRefresh());
@@ -44,14 +47,16 @@ class PetSyncWorker {
   }
 
   static void stopListeningForUiRefresh() {
+    final port = _uiPort;
+    if (port == null) return;
     IsolateNameServer.removePortNameMapping(_uiPortName);
-    _uiPort?.close();
+    port.close();
     _uiPort = null;
   }
 
-  // ---- Lado worker (corre en otro isolate; no hay Provider, ni Firebase listo) ----
+  // ---- Worker side  ----
 
-  /// true = éxito. false = reintentar (equivale a Result.retry()).
+  /// true = success. false = retry
   static Future<bool> run() async {
     PetRepository? repository;
     try {
@@ -66,7 +71,7 @@ class PetSyncWorker {
       return false;
     } finally {
       repository?.dispose();
-      // Aunque falle a mitad (p. ej. ya descargó la mascota), la UI se actualiza.
+
       IsolateNameServer.lookupPortByName(_uiPortName)?.send('changed');
     }
   }

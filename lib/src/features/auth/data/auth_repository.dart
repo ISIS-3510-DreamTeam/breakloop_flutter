@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
 import '../model/app_user.dart';
 import '../model/auth_failure.dart';
 
@@ -32,6 +33,7 @@ class AuthRepository {
       await _auth.signInWithEmailAndPassword(email: email, password: password);
       //Notice this event will be caught by the authStateChange and we will get the user from that.
     } on FirebaseAuthException catch (e){
+      debugPrint('[AuthRepository] code=${e.code} message=${e.message}');
       throw AuthFailure.fromCode(e.code);
     }
   }

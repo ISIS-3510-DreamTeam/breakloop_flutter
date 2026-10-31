@@ -1,8 +1,8 @@
 import 'package:breakloop_flutter/src/features/context_aware/data/activity_log_repository.dart';
 import 'package:breakloop_flutter/src/features/focus_session/data/focus_session_repository.dart';
 
-/// Equivale a los dos observeXpSince de Room: suma el XP desde el inicio del día
-/// y vuelve a emitir cada vez que cambian los datos.
+//Equivalent to the room operations performed in kotlin. In this case we handle it through streams in their corresponding repositories.
+//Each day the points are reset so the pet returns to sad mood.
 class PetXpSource {
   PetXpSource({
     required this._activityLogs,
@@ -34,7 +34,6 @@ class PetXpSource {
   }
 
   // SUM(xpEarned) WHERE startTime >= startOfDay
-  // SUPUESTO: los campos se llaman startedAt y xpEarned. Confírmalos en FocusSessionModel.
   Future<int> _focusXp(DateTime startOfDay) async {
     final sessions = await _focusSessions.getLocalSessions();
     var total = 0;

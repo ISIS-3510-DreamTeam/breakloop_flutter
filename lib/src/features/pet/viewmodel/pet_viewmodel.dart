@@ -61,24 +61,24 @@ class PetViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Devuelve false si no hay conexión (la vista muestra el aviso, antes era un Toast).
+  // False if no connection
   Future<bool> changePet(String petId) async {
     await _repository.changePet(petId);
     return NetworkChecker.isOnline();
   }
 
-  /// Llamar cuando la app vuelve a primer plano.
+  // call when app is in foreground again
   void onAppResumed() {
-    _repository.notifyExternalChange(); // por si el worker escribió y el aviso no llegó
-    if (_startOfToday() != _xpDay) _observeXpToday(); // cruzó la medianoche
+    _repository.notifyExternalChange();
+    if (_startOfToday() != _xpDay) _observeXpToday(); // crossed midnight
   }
 
-  // Reacciona a cada cambio guardado (mascota nueva, mood, elección pendiente).
+  // React to each saved change
   void _observePet() {
     _stateSub = _repository.observeState().listen((state) async {
       final requestId = ++_stateRequestId;
       final bytes = await _repository.getImageBytes(state.mood);
-      if (_disposed || requestId != _stateRequestId) return; // llegó uno más reciente
+      if (_disposed || requestId != _stateRequestId) return;
       currentPetId = state.currentPetId;
       pendingPetId = state.pendingPetId;
       mood = state.mood;
@@ -87,7 +87,7 @@ class PetViewModel extends ChangeNotifier {
     });
   }
 
-  // Suma el XP de hoy (actividades offline + sesiones de foco) y actualiza el mood.
+  // Sum  XP from today and update mood
   void _observeXpToday() {
     for (final sub in _xpSubs) {
       sub.cancel();
@@ -100,7 +100,7 @@ class PetViewModel extends ChangeNotifier {
     int? focusXp;
 
     void onChanged() {
-      if (activityXp == null || focusXp == null) return; // como combine: espera ambos
+      if (activityXp == null || focusXp == null) return;
       xpToday = activityXp! + focusXp!;
       notifyListeners();
       unawaited(_repository.updateMood(_calculateMood.calculate(xpToday)));
