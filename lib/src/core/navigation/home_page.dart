@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../features/auth/data/auth_repository.dart';
 
 import '../../features/goals/view/goal_progress_card.dart';
+import '../../features/pet/view/pet_card.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -31,7 +32,7 @@ class _HomePageState extends State<HomePage> {
             children: [
               GoalProgressCard(),
               const SizedBox(height: 50),
-              Text("Pets and badges are coming soon")
+              const PetCard()
             ],
           )
         ),

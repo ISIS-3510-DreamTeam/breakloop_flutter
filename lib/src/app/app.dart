@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../features/focus_session/data/focus_session_repository.dart';
+import '../features/pet/data/pet_repository.dart';
+import '../features/pet/data/pet_xp_source.dart';
+import '../features/pet/viewmodel/pet_viewmodel.dart';
 import 'router.dart';
 
 import 'theme.dart';
@@ -49,6 +53,19 @@ class MyApp extends StatelessWidget {
         //Activity in progress, shown in a banner under the header
         ChangeNotifierProvider(
           create: (_) => ActiveActivityViewModel(ActivityLogRepositoryImpl(), ActivityRepositoryImpl(ActivityCatalogDataSource())),
+        ),
+        ChangeNotifierProvider(
+          create: (_) {
+            final xp = PetXpSource(
+              activityLogs: ActivityLogRepositoryImpl(),
+              focusSessions: FocusSessionRepository(),
+            );
+            return PetViewModel(
+              repository: PetRepository(),
+              observeActivityXpSince: xp.observeActivityXpSince,
+              observeFocusXpSince: xp.observeFocusXpSince,
+            );
+          },
         ),
       ],
       child: const _RouterApp(),

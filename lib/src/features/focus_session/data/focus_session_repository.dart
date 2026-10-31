@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -7,6 +8,10 @@ import 'focus_remote_datasource.dart';
 
 /// Repository that manages local focus sessions and synchronization with Firestore
 class FocusSessionRepository {
+  //TODO: CHECK
+  static final _changes = StreamController<void>.broadcast();
+  Stream<void> watchChanges() => _changes.stream;
+
   final FocusRemoteDatasource _remoteDatasource;
 
   // key used to store focus sessions locally
@@ -48,6 +53,9 @@ class FocusSessionRepository {
 
     // Convert the list into JSON and save it.
     await prefs.setString(_storageKey, jsonEncode(jsonList));
+
+    //TODO: Check
+    _changes.add(null);
   }
 
   // Saves a new focus session locally

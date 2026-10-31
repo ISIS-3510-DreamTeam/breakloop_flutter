@@ -4,6 +4,7 @@ enum AuthFailureType {
   userNotFound,
   emailAlreadyInUse,
   weakPassword,
+  network,
   unknown,
 }
 
@@ -23,6 +24,8 @@ class AuthFailure {
         return const AuthFailure(AuthFailureType.userNotFound, "There is no account associated to the entered e-mail.");
       case 'weak-password':
         return const AuthFailure(AuthFailureType.weakPassword, "The password is too weak.");
+      case 'network-request-failed':
+        return const AuthFailure(AuthFailureType.network, "Network error. Check you device connection");
       default:
         return const AuthFailure(AuthFailureType.unknown, "Oops, something went wrong. Try again. ");
             
