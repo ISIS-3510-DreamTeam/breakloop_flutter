@@ -55,19 +55,34 @@ class ProfileViewModel extends ChangeNotifier {
     _state = _state.copyWith(isLoading: true, isOwnProfile: uid == currentUid);
     notifyListeners();
 
-    // A friend's streak and pet can change while the screen is open, so listen to them
     if (!_state.isOwnProfile) {
+      // Show the last saved version (SQLite) while Firestore answers
+      _state = _state.copyWith(
+        profile: await _repository.getStoredFriendProfile(uid),
+      );
+      notifyListeners();
+
+      // A friend's streak and pet can change while the screen is open, so listen to them
       _watchProfile(uid);
       return;
     }
 
     String? errorMessage;
     try {
-      final profile = await _repository.getProfile(uid);
+      // Show the last saved profile (SharedPreferences) and photo (file) right away
+      _state = _state.copyWith(
+        profile: await _repository.getStoredOwnProfile(uid),
+        localPhoto: await _repository.getStoredPhoto(uid),
+      );
+      notifyListeners();
+
+      final profile = await _repository.refreshOwnProfile(uid);
       _state = _state.copyWith(profile: profile);
     } catch (e) {
       debugPrint('[ProfileViewModel] loadProfile failed: $e');
-      errorMessage = "We couldn't load the profile. Try again";
+      errorMessage = _state.profile == null
+          ? "We couldn't load the profile. Try again"
+          : "We couldn't update the profile. Showing the last saved one";
     } finally {
       // Always hide the loading state, even if something failed
       _state = _state.copyWith(isLoading: false, errorMessage: errorMessage);
@@ -78,7 +93,7 @@ class ProfileViewModel extends ChangeNotifier {
   // Updates the screen every time the profile changes in Firestore
   void _watchProfile(String uid) {
     _profileSubscription?.cancel();
-    _profileSubscription = _repository.watchProfile(uid).listen(
+    _profileSubscription = _repository.watchFriendProfile(uid).listen(
       (profile) {
         _state = _state.copyWith(profile: profile, isLoading: false);
         notifyListeners();
@@ -87,7 +102,9 @@ class ProfileViewModel extends ChangeNotifier {
         debugPrint('[ProfileViewModel] watchProfile failed: $e');
         _state = _state.copyWith(
           isLoading: false,
-          errorMessage: "We couldn't load the profile. Try again",
+          errorMessage: _state.profile == null
+              ? "We couldn't load the profile. Try again"
+              : "We couldn't update the profile. Showing the last saved one",
         );
         notifyListeners();
       },
@@ -106,7 +123,7 @@ class ProfileViewModel extends ChangeNotifier {
 
     final Uint8List photo;
     try {
-      photo = await _repository.compressPhoto(bytes);
+      photo = await _repository.compressAndSavePhoto(profile.uid, bytes);
     } catch (e) {
       debugPrint('[ProfileViewModel] compressPhoto failed: $e');
       _state = _state.copyWith(

@@ -38,6 +38,30 @@ class ProfileModel {
     );
   }
 
+  // Creates a ProfileModel from locally stored data
+  factory ProfileModel.fromMap(Map<String, dynamic> map) {
+    return ProfileModel(
+      uid: map['uid'] as String,
+      displayName: map['displayName'] as String? ?? '',
+      photoUrl: map['photoUrl'] as String?,
+      friendCode: map['friendCode'] as String? ?? '',
+      streak: map['streak'] as int? ?? 0,
+      petLevel: map['petLevel'] as int? ?? 1,
+    );
+  }
+
+  // Converts the model into a Map for local storage
+  Map<String, dynamic> toMap() {
+    return {
+      'uid': uid,
+      'displayName': displayName,
+      'photoUrl': photoUrl,
+      'friendCode': friendCode,
+      'streak': streak,
+      'petLevel': petLevel,
+    };
+  }
+
   // Creates a new profile while keeping the values that were not changed
   ProfileModel copyWith({String? displayName, String? photoUrl}) {
     return ProfileModel(
