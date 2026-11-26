@@ -51,6 +51,8 @@ dependencies:
   flutter_svg: ^2.3.2
   sqflite: ^2.4.5
   workmanager: ^0.10.10
+  image: ^4.13.1
+  firebase_storage: ^13.6.1
 
 dev_dependencies:
   flutter_test:
