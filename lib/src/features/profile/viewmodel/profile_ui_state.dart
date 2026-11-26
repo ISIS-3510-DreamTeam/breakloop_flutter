@@ -18,7 +18,16 @@ class ProfileUiState {
   // Indicates if the new photo is being compressed or uploaded
   final bool isUploadingPhoto;
 
-  // Stores an error message if something goes wrong
+  // Indicates if the name or photo changed offline were not sent yet
+  final bool hasPendingChanges;
+
+  // When the friend's profile was last downloaded ("updated X ago")
+  final DateTime? lastUpdated;
+
+  // Indicates if the device has no connection
+  final bool isOffline;
+
+  // Stores a message for the user if something goes wrong or there is no connection
   final String? errorMessage;
 
   const ProfileUiState({
@@ -27,6 +36,9 @@ class ProfileUiState {
     this.isOwnProfile = false,
     this.isLoading = false,
     this.isUploadingPhoto = false,
+    this.hasPendingChanges = false,
+    this.lastUpdated,
+    this.isOffline = false,
     this.errorMessage,
   });
 
@@ -37,6 +49,9 @@ class ProfileUiState {
     bool? isOwnProfile,
     bool? isLoading,
     bool? isUploadingPhoto,
+    bool? hasPendingChanges,
+    DateTime? lastUpdated,
+    bool? isOffline,
     String? errorMessage,
   }) {
     return ProfileUiState(
@@ -45,6 +60,9 @@ class ProfileUiState {
       isOwnProfile: isOwnProfile ?? this.isOwnProfile,
       isLoading: isLoading ?? this.isLoading,
       isUploadingPhoto: isUploadingPhoto ?? this.isUploadingPhoto,
+      hasPendingChanges: hasPendingChanges ?? this.hasPendingChanges,
+      lastUpdated: lastUpdated ?? this.lastUpdated,
+      isOffline: isOffline ?? this.isOffline,
       errorMessage: errorMessage,
     );
   }

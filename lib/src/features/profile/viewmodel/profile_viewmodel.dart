@@ -29,6 +29,9 @@ class ProfileViewModel extends ChangeNotifier {
   // Listens for changes in a friend's profile
   StreamSubscription<ProfileModel>? _profileSubscription;
 
+  // Listens for connection changes to update the screen when the network comes back
+  StreamSubscription<bool>? _connectionSubscription;
+
   // The photo upload can end after the screen is closed
   bool _isDisposed = false;
 
@@ -37,7 +40,38 @@ class ProfileViewModel extends ChangeNotifier {
     this._repository, {
     this.uid,
     FirebaseAuth? auth,
-  }) : _auth = auth ?? FirebaseAuth.instance;
+  }) : _auth = auth ?? FirebaseAuth.instance {
+    _connectionSubscription =
+        _repository.watchConnection().listen(_onConnectionChanged);
+  }
+
+  void _onConnectionChanged(bool isOnline) {
+    if (!isOnline) {
+      _state = _state.copyWith(isOffline: true, errorMessage: _offlineMessage());
+      notifyListeners();
+      return;
+    }
+
+    _state = _state.copyWith(isOffline: false);
+    notifyListeners();
+
+    // A friend's Stream resumes by itself. The own profile is downloaded again,
+    // while the worker sends the changes made offline
+    if (_state.isOwnProfile) loadProfile();
+  }
+
+  // Message that explains what is shown without connection
+  String _offlineMessage() {
+    final hasProfile = _state.profile != null;
+    if (_state.isOwnProfile) {
+      return hasProfile
+          ? "You're offline. Showing your saved profile"
+          : "You're offline. Connect to the internet to see your profile";
+    }
+    return hasProfile
+        ? "You're offline. Showing the last saved profile"
+        : "You're offline. This profile will load when you're back online";
+  }
 
   // Loads the profile of the friend, or of the logged user if no uid was given
   Future<void> loadProfile() async {
@@ -55,20 +89,16 @@ class ProfileViewModel extends ChangeNotifier {
     _state = _state.copyWith(isLoading: true, isOwnProfile: uid == currentUid);
     notifyListeners();
 
-    if (!_state.isOwnProfile) {
-      // A fresh profile in memory is shown without the loading state.
-      // Otherwise, show the last saved version (SQLite) while Firestore answers
-      final cachedProfile = _repository.getCachedFriendProfile(uid);
-      _state = _state.copyWith(
-        profile: cachedProfile ?? await _repository.getStoredFriendProfile(uid),
-        isLoading: cachedProfile == null,
-      );
-      notifyListeners();
-
-      // A friend's streak and pet can change while the screen is open, so listen to them
-      _watchProfile(uid);
-      return;
+    if (_state.isOwnProfile) {
+      await _loadOwnProfile(uid);
+    } else {
+      await _loadFriendProfile(uid);
     }
+  }
+
+  Future<void> _loadOwnProfile(String uid) async {
+    // Update the screen when the worker sends the changes made offline
+    _repository.listenForSyncFinished(_onSyncFinished);
 
     String? errorMessage;
     try {
@@ -76,16 +106,24 @@ class ProfileViewModel extends ChangeNotifier {
       _state = _state.copyWith(
         profile: await _repository.getStoredOwnProfile(uid),
         localPhoto: await _repository.getStoredPhoto(uid),
+        hasPendingChanges: await _repository.hasPendingChanges(uid),
       );
       notifyListeners();
 
-      final profile = await _repository.refreshOwnProfile(uid);
-      _state = _state.copyWith(profile: profile);
+      final isOnline = await _repository.isOnline();
+      _state = _state.copyWith(isOffline: !isOnline);
+
+      if (!isOnline) {
+        errorMessage = _offlineMessage();
+      } else {
+        final profile = await _repository.refreshOwnProfile(uid);
+        _state = _state.copyWith(profile: profile);
+      }
     } catch (e) {
-      debugPrint('[ProfileViewModel] loadProfile failed: $e');
+      debugPrint('[ProfileViewModel] loadOwnProfile failed: $e');
       errorMessage = _state.profile == null
-          ? "We couldn't load the profile. Try again"
-          : "We couldn't update the profile. Showing the last saved one";
+          ? "We couldn't load your profile. Try again"
+          : "We couldn't update your profile. Showing your saved one";
     } finally {
       // Always hide the loading state, even if something failed
       _state = _state.copyWith(isLoading: false, errorMessage: errorMessage);
@@ -93,12 +131,46 @@ class ProfileViewModel extends ChangeNotifier {
     }
   }
 
+  Future<void> _loadFriendProfile(String uid) async {
+    // A fresh profile in memory is shown without the loading state.
+    // Otherwise, show the last saved version (SQLite) while Firestore answers
+    final cachedProfile = _repository.getCachedFriendProfile(uid);
+    if (cachedProfile != null) {
+      _state = _state.copyWith(profile: cachedProfile, isLoading: false);
+    } else {
+      final stored = await _repository.getStoredFriendProfile(uid);
+      _state = _state.copyWith(
+        profile: stored?.profile,
+        lastUpdated: stored?.updatedAt,
+      );
+    }
+
+    // Without connection there is nothing else to wait for
+    if (!await _repository.isOnline()) {
+      _state = _state.copyWith(
+        isOffline: true,
+        isLoading: false,
+        errorMessage: _offlineMessage(),
+      );
+    }
+    notifyListeners();
+
+    // A friend's streak and pet can change while the screen is open, so listen to them.
+    // Offline it stays quiet and starts sending data when the connection comes back
+    _watchProfile(uid);
+  }
+
   // Updates the screen every time the profile changes in Firestore
   void _watchProfile(String uid) {
     _profileSubscription?.cancel();
     _profileSubscription = _repository.watchFriendProfile(uid).listen(
       (profile) {
-        _state = _state.copyWith(profile: profile, isLoading: false);
+        _state = _state.copyWith(
+          profile: profile,
+          lastUpdated: DateTime.now(),
+          isOffline: false,
+          isLoading: false,
+        );
         notifyListeners();
       },
       onError: (Object e) {
@@ -106,15 +178,33 @@ class ProfileViewModel extends ChangeNotifier {
         _state = _state.copyWith(
           isLoading: false,
           errorMessage: _state.profile == null
-              ? "We couldn't load the profile. Try again"
-              : "We couldn't update the profile. Showing the last saved one",
+              ? "We couldn't load this profile. Try again"
+              : "We couldn't update this profile. Showing the last saved one",
         );
         notifyListeners();
       },
     );
   }
 
-  // Compresses the photo picked by the user and uploads it
+  // Shows the profile saved by the worker after it sent the pending changes
+  Future<void> _onSyncFinished() async {
+    final uid = _state.profile?.uid;
+    if (uid == null || _isDisposed) return;
+
+    final storedProfile = await _repository.getStoredOwnProfile(uid);
+    final hasPendingChanges = await _repository.hasPendingChanges(uid);
+    if (_isDisposed) return;
+
+    // The offline message is cleared because the changes were sent
+    _state = _state.copyWith(
+      profile: storedProfile,
+      hasPendingChanges: hasPendingChanges,
+    );
+    notifyListeners();
+  }
+
+  // Compresses the photo picked by the user and uploads it.
+  // Without connection the photo stays on the device and the worker uploads it later
   Future<void> changePhoto(Uint8List bytes) async {
     final profile = _state.profile;
     if (!_state.isOwnProfile || profile == null || _state.isUploadingPhoto) {
@@ -141,6 +231,19 @@ class ProfileViewModel extends ChangeNotifier {
     _state = _state.copyWith(localPhoto: photo);
     notifyListeners();
 
+    if (!await _repository.isOnline()) {
+      await _repository.queuePhotoUpload(profile.uid);
+      _state = _state.copyWith(
+        isUploadingPhoto: false,
+        hasPendingChanges: true,
+        isOffline: true,
+        errorMessage:
+            "You're offline. Your photo will upload when you're back online",
+      );
+      notifyListeners();
+      return;
+    }
+
     // The upload is not awaited, the handlers update the screen when it ends
     _repository.uploadPhoto(profile.uid, photo).then((photoUrl) {
       if (_isDisposed) return;
@@ -149,18 +252,23 @@ class ProfileViewModel extends ChangeNotifier {
         isUploadingPhoto: false,
       );
       notifyListeners();
-    }).catchError((Object e) {
+    }).catchError((Object e) async {
       debugPrint('[ProfileViewModel] uploadPhoto failed: $e');
+      // The photo is already on the device, so the worker retries the upload
+      await _repository.queuePhotoUpload(profile.uid);
       if (_isDisposed) return;
       _state = _state.copyWith(
         isUploadingPhoto: false,
-        errorMessage: "We couldn't upload your photo. Try again",
+        hasPendingChanges: true,
+        errorMessage:
+            "We couldn't upload your photo. We'll try again automatically",
       );
       notifyListeners();
     });
   }
 
-  // Changes the name of the logged user
+  // Changes the name of the logged user.
+  // Without connection the name is saved on the device and the worker sends it later
   Future<void> updateDisplayName(String name) async {
     final profile = _state.profile;
     if (!_state.isOwnProfile || profile == null || _state.isLoading) return;
@@ -174,6 +282,19 @@ class ProfileViewModel extends ChangeNotifier {
     if (trimmedName.length > maxNameLength) {
       _state = _state.copyWith(
         errorMessage: 'Use $maxNameLength characters or less',
+      );
+      notifyListeners();
+      return;
+    }
+
+    if (!await _repository.isOnline()) {
+      await _repository.queueDisplayName(profile.uid, trimmedName);
+      _state = _state.copyWith(
+        profile: profile.copyWith(displayName: trimmedName),
+        hasPendingChanges: true,
+        isOffline: true,
+        errorMessage:
+            "You're offline. Your new name will be saved when you're back online",
       );
       notifyListeners();
       return;
@@ -199,9 +320,11 @@ class ProfileViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
-    // Stop listening to Firestore when the screen is closed
+    // Stop listening to Firestore, the connection and the worker when the screen is closed
     _isDisposed = true;
     _profileSubscription?.cancel();
+    _connectionSubscription?.cancel();
+    if (_state.isOwnProfile) _repository.stopListeningForSyncFinished();
     super.dispose();
   }
 }

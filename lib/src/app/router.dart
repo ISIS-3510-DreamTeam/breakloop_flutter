@@ -16,6 +16,7 @@ import '../features/context_aware/view/offline_page.dart';
 import '../features/context_aware/view/activity_detail_page.dart';
 import '../features/friends/view/friends_page.dart';
 import '../features/friends/viewmodel/friends_viewmodel.dart';
+import '../features/profile/data/profile_repository.dart';
 
 //Add here additional routes
 import '../core/navigation/home_page.dart';
@@ -112,7 +113,9 @@ GoRouter buildRouter(AuthRepository authRepository) {
                 path: '/social',
                 //The ViewModel is created when the user opens the tab, after logging in
                 builder: (_, _) => ChangeNotifierProvider(
-                  create: (_) => FriendsViewModel(),
+                  create: (ctx) => FriendsViewModel(
+                    profileRepository: ctx.read<ProfileRepository>(),
+                  ),
                   child: const FriendsPage(),
                 ),
               ),

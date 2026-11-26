@@ -1,11 +1,15 @@
 import 'dart:typed_data';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
+
+import '../../../core/network/network_checker.dart';
 import '../model/profile_model.dart';
 import 'profile_local_datasource.dart';
 import 'profile_lru_cache.dart';
 import 'profile_photo_compressor.dart';
 import 'profile_photo_storage.dart';
 import 'profile_remote_datasource.dart';
+import 'profile_sync_worker.dart';
 
 /// Repository that manages the user's profile and the profiles of friends.
 /// It decides if data comes from memory, the device or Firestore.
@@ -30,26 +34,53 @@ class ProfileRepository {
         _photoCompressor = photoCompressor ?? ProfilePhotoCompressor(),
         _friendsCache = friendsCache ?? ProfileLruCache();
 
+  // Checks if the device has a network connection before calling Firebase
+  Future<bool> isOnline() => NetworkChecker.isOnline();
+
+  // Emits true when the connection comes back and false when it is lost
+  Stream<bool> watchConnection() => Connectivity()
+      .onConnectivityChanged
+      .map((results) => !results.contains(ConnectivityResult.none))
+      .distinct();
+
+  // Lets the screen know when the sync worker finished
+  void listenForSyncFinished(void Function() onFinished) =>
+      ProfileSyncWorker.listenForUiRefresh(onFinished);
+
+  void stopListeningForSyncFinished() =>
+      ProfileSyncWorker.stopListeningForUiRefresh();
+
   // Gets a friend's profile from memory if it was seen in the last minutes
   ProfileModel? getCachedFriendProfile(String uid) => _friendsCache.get(uid);
 
-  // Gets the last saved own profile, or null if it was never saved
-  Future<ProfileModel?> getStoredOwnProfile(String uid) =>
-      _localDatasource.getOwnProfile(uid);
+  // Gets the last saved own profile with the changes not sent yet,
+  // or null if it was never saved
+  Future<ProfileModel?> getStoredOwnProfile(String uid) async {
+    final profile = await _localDatasource.getOwnProfile(uid);
+    if (profile == null) return null;
+    return _withPendingName(profile);
+  }
 
-  // Gets the last saved profile of a friend, or null if it was never saved
-  Future<ProfileModel?> getStoredFriendProfile(String uid) =>
+  // Gets the last saved profile of a friend and when it was downloaded
+  Future<({ProfileModel profile, DateTime updatedAt})?> getStoredFriendProfile(
+          String uid) =>
       _localDatasource.getFriendProfile(uid);
 
   // Gets the photo saved on the device, or null if there is none
   Future<Uint8List?> getStoredPhoto(String uid) =>
       _photoStorage.readPhoto(uid);
 
+  // Indicates if the name or photo changed offline were not sent yet
+  Future<bool> hasPendingChanges(String uid) async =>
+      await _localDatasource.getPendingName(uid) != null ||
+      await _localDatasource.hasPendingPhoto(uid);
+
   // Downloads the own profile and saves it on the device
   Future<ProfileModel> refreshOwnProfile(String uid) async {
     final profile = await _remoteDatasource.fetchProfile(uid);
     await _localDatasource.saveOwnProfile(profile);
-    return profile;
+    // Firestore does not have the pending name yet, so keep showing it
+    return _withPendingName(profile);
   }
 
   // Emits a friend's profile every time it changes and saves each version
@@ -59,6 +90,20 @@ class ProfileRepository {
         await _localDatasource.saveFriendProfile(profile);
         return profile;
       });
+
+  // Saves the profiles of the friends that are not on the device yet,
+  // so they can be opened later without connection
+  Future<void> prefetchFriendProfiles(List<String> friendUids) async {
+    final savedUids = await _localDatasource.getSavedFriendUids();
+    final missingUids = friendUids.where((uid) => !savedUids.contains(uid));
+
+    // Download all missing profiles at the same time
+    final profiles =
+        await Future.wait(missingUids.map(_remoteDatasource.fetchProfile));
+    for (final profile in profiles) {
+      await _localDatasource.saveFriendProfile(profile);
+    }
+  }
 
   // Crops and compresses the photo picked from the camera or gallery
   // and keeps it as a file on the device
@@ -71,11 +116,18 @@ class ProfileRepository {
   // Uploads the compressed photo and returns its URL
   Future<String> uploadPhoto(String uid, Uint8List photo) async {
     final photoUrl = await _remoteDatasource.uploadPhoto(uid, photo);
+    await _localDatasource.setPendingPhoto(uid, false);
     await _updateStoredOwnProfile(
       uid,
       (profile) => profile.copyWith(photoUrl: photoUrl),
     );
     return photoUrl;
+  }
+
+  // Marks the saved photo file to be uploaded by the worker when there is connection
+  Future<void> queuePhotoUpload(String uid) async {
+    await _localDatasource.setPendingPhoto(uid, true);
+    await ProfileSyncWorker.schedule(uid);
   }
 
   // Changes the name of the user
@@ -85,6 +137,38 @@ class ProfileRepository {
       uid,
       (profile) => profile.copyWith(displayName: displayName),
     );
+  }
+
+  // Keeps the new name on the device and lets the worker send it later
+  Future<void> queueDisplayName(String uid, String displayName) async {
+    await _localDatasource.savePendingName(uid, displayName);
+    await ProfileSyncWorker.schedule(uid);
+  }
+
+  // Sends the name and photo changed offline. Called by the sync worker
+  Future<void> syncPendingChanges(String uid) async {
+    final pendingName = await _localDatasource.getPendingName(uid);
+    if (pendingName != null) {
+      await updateDisplayName(uid, pendingName);
+      await _localDatasource.clearPendingName(uid, pendingName);
+    }
+
+    if (await _localDatasource.hasPendingPhoto(uid)) {
+      final photo = await _photoStorage.readPhoto(uid);
+      if (photo == null) {
+        await _localDatasource.setPendingPhoto(uid, false);
+      } else {
+        await uploadPhoto(uid, photo);
+      }
+    }
+  }
+
+  // Shows the name changed offline instead of the one in Firestore
+  Future<ProfileModel> _withPendingName(ProfileModel profile) async {
+    final pendingName = await _localDatasource.getPendingName(profile.uid);
+    return pendingName == null
+        ? profile
+        : profile.copyWith(displayName: pendingName);
   }
 
   // Keeps the saved own profile equal to Firestore after a change

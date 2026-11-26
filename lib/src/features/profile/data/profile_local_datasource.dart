@@ -11,8 +11,18 @@ import '../model/profile_model.dart';
 class ProfileLocalDatasource {
   Database? _database;
 
-  // Key includes the uid so data from different accounts is not mixed
+  // Keys include the uid so data from different accounts is not mixed
   String _ownProfileKey(String uid) => 'profile_own_$uid';
+  String _pendingNameKey(String uid) => 'profile_pending_name_$uid';
+  String _pendingPhotoKey(String uid) => 'profile_pending_photo_$uid';
+
+  // The sync worker runs in another isolate with its own copy of the
+  // preferences, so they are reloaded to see the changes it made
+  Future<SharedPreferences> _prefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    return prefs;
+  }
 
   Future<Database> _db() async {
     return _database ??= await openDatabase(
@@ -35,7 +45,7 @@ class ProfileLocalDatasource {
 
   // Gets the stored own profile, or null if it was never saved
   Future<ProfileModel?> getOwnProfile(String uid) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs();
     final jsonString = prefs.getString(_ownProfileKey(uid));
 
     if (jsonString == null) return null;
@@ -44,15 +54,41 @@ class ProfileLocalDatasource {
 
   // Saves the own profile so it can be shown without connection
   Future<void> saveOwnProfile(ProfileModel profile) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs();
     await prefs.setString(
       _ownProfileKey(profile.uid),
       jsonEncode(profile.toMap()),
     );
   }
 
-  // Gets the stored profile of a friend, or null if it was never saved
-  Future<ProfileModel?> getFriendProfile(String uid) async {
+  // Gets the name changed offline that was not sent yet, or null if there is none
+  Future<String?> getPendingName(String uid) async =>
+      (await _prefs()).getString(_pendingNameKey(uid));
+
+  // Keeps the new name until the sync worker sends it
+  Future<void> savePendingName(String uid, String name) async =>
+      (await _prefs()).setString(_pendingNameKey(uid), name);
+
+  // Removes the pending name only if it is the one that was sent,
+  // so a newer name typed during the sync is not lost
+  Future<void> clearPendingName(String uid, String sentName) async {
+    final prefs = await _prefs();
+    if (prefs.getString(_pendingNameKey(uid)) == sentName) {
+      await prefs.remove(_pendingNameKey(uid));
+    }
+  }
+
+  // Indicates if the photo file still has to be uploaded
+  Future<bool> hasPendingPhoto(String uid) async =>
+      (await _prefs()).getBool(_pendingPhotoKey(uid)) ?? false;
+
+  Future<void> setPendingPhoto(String uid, bool isPending) async =>
+      (await _prefs()).setBool(_pendingPhotoKey(uid), isPending);
+
+  // Gets the stored profile of a friend and when it was downloaded,
+  // or null if it was never saved
+  Future<({ProfileModel profile, DateTime updatedAt})?> getFriendProfile(
+      String uid) async {
     final rows = await (await _db()).query(
       'friend_profiles',
       where: 'uid = ?',
@@ -60,7 +96,17 @@ class ProfileLocalDatasource {
     );
 
     if (rows.isEmpty) return null;
-    return ProfileModel.fromMap(rows.first);
+    return (
+      profile: ProfileModel.fromMap(rows.first),
+      updatedAt:
+          DateTime.fromMillisecondsSinceEpoch(rows.first['updatedAt'] as int),
+    );
+  }
+
+  // Gets the uids of the friends whose profile is already saved
+  Future<Set<String>> getSavedFriendUids() async {
+    final rows = await (await _db()).query('friend_profiles', columns: ['uid']);
+    return rows.map((row) => row['uid'] as String).toSet();
   }
 
   // Saves or replaces the profile of a friend with the time it was downloaded

@@ -61,11 +61,17 @@ class ProfileRemoteDatasource {
     controller = StreamController<ProfileModel>(
       // Start listening to Firestore only when someone listens to the profile
       onListen: () {
-        subscriptions.add(userRef.snapshots().listen((doc) {
+        // Snapshots from Firestore's own cache are skipped: offline they can be
+        // empty and would replace the saved profile. Firestore sends the
+        // server data by itself when the connection comes back. Metadata changes
+        // are included so the server copy arrives even if it equals the cached one
+        subscriptions.add(userRef.snapshots(includeMetadataChanges: true).listen((doc) {
+          if (doc.metadata.isFromCache) return;
           profile = doc.data() ?? {};
           emit();
         }, onError: controller.addError));
-        subscriptions.add(progressRef.snapshots().listen((doc) {
+        subscriptions.add(progressRef.snapshots(includeMetadataChanges: true).listen((doc) {
+          if (doc.metadata.isFromCache) return;
           progress = doc.data() ?? {};
           emit();
         }, onError: controller.addError));
