@@ -2,17 +2,20 @@ import 'dart:typed_data';
 
 import '../model/profile_model.dart';
 import 'profile_local_datasource.dart';
+import 'profile_lru_cache.dart';
 import 'profile_photo_compressor.dart';
 import 'profile_photo_storage.dart';
 import 'profile_remote_datasource.dart';
 
 /// Repository that manages the user's profile and the profiles of friends.
-/// It decides if data comes from the device or Firestore.
+/// It decides if data comes from memory, the device or Firestore.
+/// It is shared by the whole app so the memory cache outlives each screen.
 class ProfileRepository {
   final ProfileRemoteDatasource _remoteDatasource;
   final ProfileLocalDatasource _localDatasource;
   final ProfilePhotoStorage _photoStorage;
   final ProfilePhotoCompressor _photoCompressor;
+  final ProfileLruCache _friendsCache;
 
   // Uses the provided dependencies or creates the default ones
   ProfileRepository({
@@ -20,10 +23,15 @@ class ProfileRepository {
     ProfileLocalDatasource? localDatasource,
     ProfilePhotoStorage? photoStorage,
     ProfilePhotoCompressor? photoCompressor,
+    ProfileLruCache? friendsCache,
   })  : _remoteDatasource = remoteDatasource ?? ProfileRemoteDatasource(),
         _localDatasource = localDatasource ?? ProfileLocalDatasource(),
         _photoStorage = photoStorage ?? ProfilePhotoStorage(),
-        _photoCompressor = photoCompressor ?? ProfilePhotoCompressor();
+        _photoCompressor = photoCompressor ?? ProfilePhotoCompressor(),
+        _friendsCache = friendsCache ?? ProfileLruCache();
+
+  // Gets a friend's profile from memory if it was seen in the last minutes
+  ProfileModel? getCachedFriendProfile(String uid) => _friendsCache.get(uid);
 
   // Gets the last saved own profile, or null if it was never saved
   Future<ProfileModel?> getStoredOwnProfile(String uid) =>
@@ -47,6 +55,7 @@ class ProfileRepository {
   // Emits a friend's profile every time it changes and saves each version
   Stream<ProfileModel> watchFriendProfile(String uid) =>
       _remoteDatasource.watchProfile(uid).asyncMap((profile) async {
+        _friendsCache.put(profile);
         await _localDatasource.saveFriendProfile(profile);
         return profile;
       });

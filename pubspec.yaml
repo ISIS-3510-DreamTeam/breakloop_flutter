@@ -53,6 +53,7 @@ dependencies:
   workmanager: ^0.10.10
   image: ^4.13.1
   firebase_storage: ^13.6.1
+  cached_network_image: ^4.0.7
 
 dev_dependencies:
   flutter_test:

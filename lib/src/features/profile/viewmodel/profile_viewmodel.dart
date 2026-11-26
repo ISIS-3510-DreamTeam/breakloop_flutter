@@ -32,12 +32,12 @@ class ProfileViewModel extends ChangeNotifier {
   // The photo upload can end after the screen is closed
   bool _isDisposed = false;
 
-  ProfileViewModel({
+  // The repository comes from the app so its memory cache is shared by all screens
+  ProfileViewModel(
+    this._repository, {
     this.uid,
-    ProfileRepository? repository,
     FirebaseAuth? auth,
-  })  : _repository = repository ?? ProfileRepository(),
-        _auth = auth ?? FirebaseAuth.instance;
+  }) : _auth = auth ?? FirebaseAuth.instance;
 
   // Loads the profile of the friend, or of the logged user if no uid was given
   Future<void> loadProfile() async {
@@ -56,9 +56,12 @@ class ProfileViewModel extends ChangeNotifier {
     notifyListeners();
 
     if (!_state.isOwnProfile) {
-      // Show the last saved version (SQLite) while Firestore answers
+      // A fresh profile in memory is shown without the loading state.
+      // Otherwise, show the last saved version (SQLite) while Firestore answers
+      final cachedProfile = _repository.getCachedFriendProfile(uid);
       _state = _state.copyWith(
-        profile: await _repository.getStoredFriendProfile(uid),
+        profile: cachedProfile ?? await _repository.getStoredFriendProfile(uid),
+        isLoading: cachedProfile == null,
       );
       notifyListeners();
 
