@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../pet/view/pet_thumbnail.dart';
 import '../model/profile_model.dart';
 import '../viewmodel/profile_ui_state.dart';
 import '../viewmodel/profile_viewmodel.dart';
@@ -147,20 +148,17 @@ class FriendProfilePage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.darkCoffee, width: 2),
-            ),
-            child: const Icon(Icons.pets, size: 26, color: AppColors.spicyPaprika),
-          ),
+          PetThumbnail(petId: profile.petId, petMood: profile.petMood, size: 64),
           const SizedBox(width: 12),
-          Text(
-            'Pet · Stage ${profile.petLevel}',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 13, letterSpacing: 0),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Pet',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 13, letterSpacing: 0),
+              ),
+              Text(petLabel(profile.petId, profile.petMood), style: _footerStyle(context)),
+            ],
           ),
         ],
       ),

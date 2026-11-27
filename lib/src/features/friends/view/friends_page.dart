@@ -11,6 +11,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_pill.dart';
+import '../../pet/view/pet_thumbnail.dart';
 
 class FriendsPage extends StatefulWidget {
   const FriendsPage({super.key});
@@ -257,17 +258,8 @@ class _FriendsPageState extends State<FriendsPage> {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
-          //Generic pet icon until the pet contract defines a sprite per stage
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.inputFill,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.darkCoffee, width: 2),
-            ),
-            child: const Icon(Icons.pets, color: AppColors.spicyPaprika),
-          ),
+          //The friend's pet in its current mood
+          PetThumbnail(petId: friend.petId, petMood: friend.petMood),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -279,7 +271,7 @@ class _FriendsPageState extends State<FriendsPage> {
                   overflow: TextOverflow.ellipsis,
                   style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
-                Text('Stage ${friend.petLevel}', style: _footerStyle()),
+                Text(petLabel(friend.petId, friend.petMood), style: _footerStyle()),
               ],
             ),
           ),

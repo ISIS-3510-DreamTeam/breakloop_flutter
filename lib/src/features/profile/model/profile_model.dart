@@ -11,7 +11,10 @@ class ProfileModel {
   final String friendCode;
 
   final int streak;
-  final int petLevel;
+
+  // Pet chosen by the user ("sprout") and its mood ("HAPPY"), null if none yet
+  final String? petId;
+  final String? petMood;
 
   ProfileModel({
     required this.uid,
@@ -19,7 +22,8 @@ class ProfileModel {
     this.photoUrl,
     required this.friendCode,
     required this.streak,
-    required this.petLevel,
+    this.petId,
+    this.petMood,
   });
 
   // Creates a ProfileModel from the profile and progress documents
@@ -34,7 +38,9 @@ class ProfileModel {
       photoUrl: profile['photoUrl'] as String?,
       friendCode: profile['friendCode'] as String? ?? '',
       streak: (progress['streak'] as num?)?.toInt() ?? 0,
-      petLevel: (progress['petLevel'] as num?)?.toInt() ?? 1,
+      // Saved in users/{uid} by the backend when the pet syncs
+      petId: profile['activePetId'] as String?,
+      petMood: profile['petMood'] as String?,
     );
   }
 
@@ -46,7 +52,8 @@ class ProfileModel {
       photoUrl: map['photoUrl'] as String?,
       friendCode: map['friendCode'] as String? ?? '',
       streak: map['streak'] as int? ?? 0,
-      petLevel: map['petLevel'] as int? ?? 1,
+      petId: map['petId'] as String?,
+      petMood: map['petMood'] as String?,
     );
   }
 
@@ -58,7 +65,8 @@ class ProfileModel {
       'photoUrl': photoUrl,
       'friendCode': friendCode,
       'streak': streak,
-      'petLevel': petLevel,
+      'petId': petId,
+      'petMood': petMood,
     };
   }
 
@@ -70,7 +78,8 @@ class ProfileModel {
       photoUrl: photoUrl ?? this.photoUrl,
       friendCode: friendCode,
       streak: streak,
-      petLevel: petLevel,
+      petId: petId,
+      petMood: petMood,
     );
   }
 }

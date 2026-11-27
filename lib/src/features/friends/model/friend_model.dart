@@ -6,13 +6,17 @@ class FriendModel {
   final String uid;
   final String displayName;
   final int streak;
-  final int petLevel;
+
+  // Pet chosen by the friend ("sprout") and its mood ("HAPPY"), null if none yet
+  final String? petId;
+  final String? petMood;
 
   FriendModel({
     required this.uid,
     required this.displayName,
     required this.streak,
-    required this.petLevel,
+    this.petId,
+    this.petMood,
   });
 
   // Creates a FriendModel from locally stored data
@@ -21,7 +25,8 @@ class FriendModel {
       uid: map['uid'] as String,
       displayName: map['displayName'] as String? ?? '',
       streak: map['streak'] as int? ?? 0,
-      petLevel: map['petLevel'] as int? ?? 1,
+      petId: map['petId'] as String?,
+      petMood: map['petMood'] as String?,
     );
   }
 
@@ -31,7 +36,8 @@ class FriendModel {
       'uid': uid,
       'displayName': displayName,
       'streak': streak,
-      'petLevel': petLevel,
+      'petId': petId,
+      'petMood': petMood,
     };
   }
 
@@ -47,7 +53,9 @@ class FriendModel {
       displayName: profile['displayName'] as String? ?? '',
 
       streak: (progress['streak'] as num?)?.toInt() ?? 0,
-      petLevel: (progress['petLevel'] as num?)?.toInt() ?? 1,
+      // Saved in users/{uid} by the backend when the pet syncs
+      petId: profile['activePetId'] as String?,
+      petMood: profile['petMood'] as String?,
     );
   }
 }

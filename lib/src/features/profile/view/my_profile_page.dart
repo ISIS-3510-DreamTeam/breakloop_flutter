@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_pill.dart';
+import '../../pet/view/pet_thumbnail.dart';
 import '../viewmodel/profile_ui_state.dart';
 import '../viewmodel/profile_viewmodel.dart';
 import 'profile_avatar.dart';
@@ -191,7 +192,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
         ],
       ),
       const SizedBox(height: 16),
-      _buildPetCard('Your pet', profile.petLevel),
+      _buildPetCard(profile.petId, profile.petMood),
     ];
   }
 
@@ -246,29 +247,20 @@ class _MyProfilePageState extends State<MyProfilePage> {
     );
   }
 
-  Widget _buildPetCard(String title, int petLevel) {
+  Widget _buildPetCard(String? petId, String? petMood) {
     return AppCard(
       color: AppColors.inputFill,
       shadowOffset: const Offset(0, 4),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.darkCoffee, width: 2),
-            ),
-            child: const Icon(Icons.pets, color: AppColors.spicyPaprika),
-          ),
+          PetThumbnail(petId: petId, petMood: petMood, size: 64),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: _labelStyle()),
-              Text('Stage $petLevel', style: _footerStyle()),
+              Text('Your pet', style: _labelStyle()),
+              Text(petLabel(petId, petMood), style: _footerStyle()),
             ],
           ),
         ],

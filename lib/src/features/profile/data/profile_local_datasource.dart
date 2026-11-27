@@ -27,19 +27,27 @@ class ProfileLocalDatasource {
   Future<Database> _db() async {
     return _database ??= await openDatabase(
       '${await getDatabasesPath()}/friend_profiles.db',
-      version: 1,
-      onCreate: (db, version) async {
-        await db.execute(
-          'CREATE TABLE friend_profiles ('
-          'uid TEXT PRIMARY KEY, '
-          'displayName TEXT NOT NULL, '
-          'photoUrl TEXT, '
-          'friendCode TEXT NOT NULL, '
-          'streak INTEGER NOT NULL, '
-          'petLevel INTEGER NOT NULL, '
-          'updatedAt INTEGER NOT NULL)',
-        );
+      version: 2,
+      onCreate: (db, version) => _createFriendProfiles(db),
+      // Version 2 changed petLevel for the pet and its mood.
+      onUpgrade: (db, oldVersion, newVersion) async {
+        await db.execute('DROP TABLE IF EXISTS friend_profiles');
+        await _createFriendProfiles(db);
       },
+    );
+  }
+
+  Future<void> _createFriendProfiles(Database db) {
+    return db.execute(
+      'CREATE TABLE friend_profiles ('
+      'uid TEXT PRIMARY KEY, '
+      'displayName TEXT NOT NULL, '
+      'photoUrl TEXT, '
+      'friendCode TEXT NOT NULL, '
+      'streak INTEGER NOT NULL, '
+      'petId TEXT, '
+      'petMood TEXT, '
+      'updatedAt INTEGER NOT NULL)',
     );
   }
 

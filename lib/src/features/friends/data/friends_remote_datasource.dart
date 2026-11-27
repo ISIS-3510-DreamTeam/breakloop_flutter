@@ -95,7 +95,7 @@ class FriendsRemoteDatasource {
     return snapshot.docs.map((doc) => doc.id).toList();
   }
 
-  // Gets a friend's name, streak and pet level.
+  // Gets a friend's name, streak, pet and pet mood.
   Future<FriendModel> fetchFriend(String friendUid) async {
     final userRef = _firestore.collection('users').doc(friendUid);
 
