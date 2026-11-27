@@ -19,9 +19,7 @@ List<AchievementProgress> evaluateAchievements(
 int _currentFor(Achievement achievement, EvaluationInput input) {
   switch (achievement.rule) {
     case AchievementRule.firstDayUnderLimit:
-      final limit = input.dailyLimitMinutes;
-      if (limit == null || limit <= 0) return 0;
-      return input.days.any((day) =>day.minutes < limit ) ? 1: 0;
+      return input.streak >= 1 ? 1 : 0;
 
     case AchievementRule.streakDays:
       return input.streak;
