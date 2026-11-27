@@ -31,6 +31,19 @@ class GoalsRepository {
     ));
   }
 
+  Future<GoalModel> getCurrentGoal() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastEvaluation = prefs.getString('lastEvaluationDate');
+    return GoalModel(
+      dailyLimitMinutes: prefs.getInt('dailyLimitMinutes'),
+      pendingDailyLimitMinutes: prefs.getInt('pendingDailyLimitMinutes'),
+      currentStreak: prefs.getInt('currentStreak') ?? 0,
+      lastEvaluationDate:
+      lastEvaluation != null ? DateTime.parse(lastEvaluation) : null,
+      streakBrokenToday: prefs.getBool('streakBrokenToday') ?? false,
+    );
+  }
+
   Stream<GoalModel> watchGoal() =>_goalController.stream;
 
   Future<void> setDailyLimit(int minutes) async {

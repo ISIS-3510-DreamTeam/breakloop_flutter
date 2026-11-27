@@ -24,6 +24,12 @@ import '../features/context_aware/viewmodel/avoided_screen_time_viewmodel.dart';
 import '../features/context_aware/viewmodel/active_activity_viewmodel.dart';
 import '../features/context_aware/data/activity_repository_impl.dart';
 import '../features/context_aware/data/activity_catalog_data_source.dart';
+import '../features/achievements/data/achievements_catalog_api.dart';
+import '../features/achievements/data/achievements_catalog_store.dart';
+import '../features/achievements/data/achievements_local_datasource.dart';
+import '../features/achievements/data/achievements_repository.dart';
+import '../features/achievements/viewmodel/achievements_viewmodel.dart';
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -42,6 +48,28 @@ class MyApp extends StatelessWidget {
         Provider(create: (_) => GoalsRepository()),
         ChangeNotifierProvider(
           create: (ctx) => GoalsViewModel(ctx.read<GoalsRepository>(), ctx.read<ScreenTimeRepository>()),
+        ),
+        Provider(
+          create: (_) => AchievementsCatalogApi(),
+          dispose: (_, api) => api.dispose(),
+        ),
+        Provider(create: (_) => AchievementsCatalogStore()),
+        Provider(create: (_) => AchievementsLocalDatasource()),
+        Provider(
+          create: (ctx) => AchievementsRepository(
+            api: ctx.read<AchievementsCatalogApi>(),
+            store: ctx.read<AchievementsCatalogStore>(),
+            local: ctx.read<AchievementsLocalDatasource>(),
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (ctx) => AchievementsViewModel(
+            auth: ctx.read<AuthRepository>(),
+            achievements: ctx.read<AchievementsRepository>(),
+            goals: ctx.read<GoalsRepository>(),
+            screenTime: ctx.read<ScreenTimeRepository>(),
+            focus: FocusSessionRepository(),
+          ),
         ),
         //Shared by the flagged apps screen and the card in Stats
         Provider(
