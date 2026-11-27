@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:isolate';
 
+import 'package:flutter/foundation.dart';
+
 import '../model/achievement.dart';
 import '../model/achievement_progress.dart';
 import '../model/evaluate_achievements.dart';
@@ -8,17 +10,22 @@ import '../model/evaluation_input.dart';
 import 'achievements_catalog_api.dart';
 import 'achievements_catalog_store.dart';
 import 'achievements_local_datasource.dart';
+import 'achievements_remote_datasource.dart';
 
 class AchievementsRepository {
   AchievementsRepository({
     required this._api,
     required this._store,
     required this._local,
+    required this._remote,
   });
 
   final AchievementsCatalogApi _api;
   final AchievementsCatalogStore _store;
   final AchievementsLocalDatasource _local;
+  final AchievementsRemoteDatasource _remote;
+
+  bool _syncing = false;
 
   // Network first. If it fails, the last saved catalog is used and fromCache is true.
   Future<({List<Achievement> catalog, bool fromCache})> loadCatalog() async {
@@ -33,7 +40,8 @@ class AchievementsRepository {
     }
   }
 
-  // Evaluates the rules in a separate isolate and stores the new unlocks.
+  // Evaluates the rules in a separate isolate, stores the new unlocks,
+  // uploads the pending ones and merges the cloud copy.
   Future<List<AchievementProgress>> evaluate({
     required String uid,
     required List<Achievement> catalog,
@@ -49,6 +57,9 @@ class AchievementsRepository {
     };
     await _local.insertUnlocks(uid, newUnlocks);
 
+    await syncPending(uid);
+    await _pullFromCloud(uid);
+
     final stored = await _local.getUnlocks(uid);
     return [
       for (final progress in evaluated)
@@ -61,8 +72,38 @@ class AchievementsRepository {
     ];
   }
 
-  // Developer tools only: removes the stored unlocks of one user.
-  Future<void> deleteUnlocks(String uid) => _local.deleteUnlocks(uid);
+  // Uploads the pending unlocks. A failure leaves them pending for the next try.
+  Future<void> syncPending(String uid) async {
+    if (_syncing) return;
+    _syncing = true;
+    try {
+      final pending = await _local.getPendingUnlocks(uid);
+      for (final entry in pending.entries) {
+        await _remote.unlock(achievementId: entry.key, unlockedAt: entry.value);
+        await _local.markSynced(uid, entry.key);
+      }
+    } catch (e) {
+      debugPrint('[AchievementsRepository] sync postponed: $e');
+    } finally {
+      _syncing = false;
+    }
+  }
+
+  // Cloud first. If the cloud delete fails, the local copy is kept and the error reaches the caller.
+  // Developer tools only.
+  Future<void> deleteUnlocks(String uid) async {
+    await _remote.deleteAll();
+    await _local.deleteUnlocks(uid);
+  }
+
+  Future<void> _pullFromCloud(String uid) async {
+    try {
+      final remote = await _remote.fetchUnlocks();
+      await _local.mergeRemoteUnlocks(uid, remote);
+    } catch (e) {
+      debugPrint('[AchievementsRepository] pull postponed: $e');
+    }
+  }
 
   List<Achievement> _parse(String body) {
     final list = jsonDecode(body) as List<dynamic>;

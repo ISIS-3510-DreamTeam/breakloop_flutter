@@ -103,9 +103,9 @@ class _StreakDebugSheetState extends State<_StreakDebugSheet> {
     if (mounted) setState(() => _goal = goal);
   }
 
-  /// Uses GoalsRepository.updateStreak, which also notifies GoalsViewModel.
-  /// The evaluation date is set to today, so the day rollover does not
-  /// change the value we just set.
+  // Uses GoalsRepository.updateStreak, which also notifies GoalsViewModel.
+  // The evaluation date is set to today, so the day rollover does not
+  // change the value we just set.
   Future<void> _setStreak(int value) async {
     final newStreak = value < 0 ? 0 : value;
     final goals = context.read<GoalsRepository>();
@@ -129,8 +129,10 @@ class _StreakDebugSheetState extends State<_StreakDebugSheet> {
     });
   }
 
-  /// Deletes the stored unlocks of the current user, then evaluates again.
-  /// Medals whose rule is still met will come back right away.
+  // Deletes the stored unlocks of the current user, then evaluates again.
+  // Medals whose rule is still met will come back right away.
+  /// Deletes the unlocks in the cloud and on this device, then evaluates again.
+  /// Medals whose rule is still met come back right away.
   Future<void> _resetUnlocks() async {
     final uid = context.read<AuthRepository>().currentUser?.uid;
     if (uid == null) return;
@@ -139,14 +141,15 @@ class _StreakDebugSheetState extends State<_StreakDebugSheet> {
     final achievements = context.read<AchievementsViewModel>();
 
     setState(() => _busy = true);
-    await repository.deleteUnlocks(uid);
-    await achievements.load();
-
-    if (!mounted) return;
-    setState(() {
-      _busy = false;
-      _lastAction = 'Achievements reestablished ';
-    });
+    try {
+      await repository.deleteUnlocks(uid);
+      await achievements.load();
+      if (mounted) setState(() => _lastAction = 'Achievements reset');
+    } catch (e) {
+      if (mounted) setState(() => _lastAction = 'Could not reset (check the network)');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   String _two(int n) => n.toString().padLeft(2, '0');
@@ -237,9 +240,9 @@ class _StreakDebugSheetState extends State<_StreakDebugSheet> {
             ),
             const SizedBox(height: 4),
             const Text(
-              'Erases all unlocked achievements. If streak or current usage'
-                  'satisfy the rules, the badge is acquired again. To see them locked again'
-                  'reset the streak to 0.',
+              'Erases all unlocked achievements, here and in the cloud. If the streak '
+                  'or current usage still meets a rule, the badge is unlocked again. '
+                  'To see them locked, set the streak to 0 first.',
               style: TextStyle(fontSize: 12),
             ),
             if (_lastAction.isNotEmpty)

@@ -28,7 +28,9 @@ import '../features/achievements/data/achievements_catalog_api.dart';
 import '../features/achievements/data/achievements_catalog_store.dart';
 import '../features/achievements/data/achievements_local_datasource.dart';
 import '../features/achievements/data/achievements_repository.dart';
+import '../features/achievements/data/achievements_remote_datasource.dart';
 import '../features/achievements/viewmodel/achievements_viewmodel.dart';
+
 
 
 class MyApp extends StatelessWidget {
@@ -55,11 +57,13 @@ class MyApp extends StatelessWidget {
         ),
         Provider(create: (_) => AchievementsCatalogStore()),
         Provider(create: (_) => AchievementsLocalDatasource()),
+        Provider(create: (_) => AchievementsRemoteDatasource()),
         Provider(
           create: (ctx) => AchievementsRepository(
             api: ctx.read<AchievementsCatalogApi>(),
             store: ctx.read<AchievementsCatalogStore>(),
             local: ctx.read<AchievementsLocalDatasource>(),
+            remote: ctx.read<AchievementsRemoteDatasource>()
           ),
         ),
         ChangeNotifierProvider(

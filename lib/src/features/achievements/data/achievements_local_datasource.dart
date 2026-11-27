@@ -53,6 +53,65 @@ class AchievementsLocalDatasource {
     };
   }
 
+
+  // Unlocks that still have to be uploaded.
+  Future<Map<String, int>> getPendingUnlocks(String uid) async {
+    final rows = await (await _db()).query(
+      'achievements',
+      columns: ['achievementId', 'unlockedAt'],
+      where: 'uid = ? AND isSynced = 0',
+      whereArgs: [uid],
+    );
+    return {
+      for (final row in rows) row['achievementId'] as String: row['unlockedAt'] as int,
+    };
+  }
+
+  Future<void> markSynced(String uid, String achievementId) async {
+    await (await _db()).update(
+      'achievements',
+      {'isSynced': 1},
+      where: 'uid = ? AND achievementId = ?',
+      whereArgs: [uid, achievementId],
+    );
+  }
+
+  // Combines the cloud unlocks with the local ones. The earliest date wins.
+  // A cloud row that is not earlier leaves the local row alone, so a pending local unlock stays pending.
+  Future<void> mergeRemoteUnlocks(String uid, Map<String, int> remote) async {
+    final db = await _db();
+    await db.transaction((txn) async {
+      final rows = await txn.query(
+        'achievements',
+        columns: ['achievementId', 'unlockedAt'],
+        where: 'uid = ?',
+        whereArgs: [uid],
+      );
+      final local = {
+        for (final row in rows) row['achievementId'] as String: row['unlockedAt'] as int,
+      };
+
+      for (final entry in remote.entries) {
+        final localAt = local[entry.key];
+        if (localAt == null) {
+          await txn.insert('achievements', {
+            'uid': uid,
+            'achievementId': entry.key,
+            'unlockedAt': entry.value,
+            'isSynced': 1,
+          });
+        } else if (entry.value <= localAt) {
+          await txn.update(
+            'achievements',
+            {'unlockedAt': entry.value, 'isSynced': 1},
+            where: 'uid = ? AND achievementId = ?',
+            whereArgs: [uid, entry.key],
+          );
+        }
+      }
+    });
+  }
+
   // Deletes every unlock of one user. Only used by the developer tools.
   Future<void> deleteUnlocks(String uid) async {
     final db = await _db();
