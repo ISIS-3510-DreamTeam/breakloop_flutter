@@ -5,6 +5,7 @@ import '../../features/auth/data/auth_repository.dart';
 import '../../features/goals/viewmodel/goals_viewmodel.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../widgets/sync_indicator.dart';
 
 //Top bar shared by all the tabs
 class AppHeader extends StatelessWidget {
@@ -41,6 +42,8 @@ class AppHeader extends StatelessWidget {
                 const _HeaderBadge(icon: 'assets/icons/shield.svg'),
                 const SizedBox(width: 6),
                 _HeaderBadge(icon: 'assets/icons/streak.svg', text: '${streak}d'),
+                //Shows only while the streak or an unlock is waiting to reach the cloud
+                const SyncIndicator(),
                 IconButton(
                   icon: const Icon(Icons.logout, size: 20, color: AppColors.neutral700),
                   tooltip: 'Sign out',

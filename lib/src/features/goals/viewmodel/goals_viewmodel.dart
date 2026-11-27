@@ -60,6 +60,9 @@ class GoalsViewModel extends ChangeNotifier {
   GoalModel goal = const GoalModel();
   DailyProgress? progress;
 
+  // True while the streak is waiting to reach the cloud. Read by the UI.
+  bool streakPendingSync = false;
+
   void _subscribeToGoal() {
     _goalsRepository.watchGoal().listen((updatedGoal) async {
 
@@ -167,12 +170,17 @@ class GoalsViewModel extends ChangeNotifier {
   }
 
   // Uploads the streak when it changed. If the request fails, the flag stays
-  // set and the next minute's refresh tries again.
+  // set and the next refresh tries again.
   Future<void> _syncPendingStreak() async {
     if (_syncingStreak) return;
-    if (!await _goalsRepository.isStreakPendingSync()) return;
+
+    if (!await _goalsRepository.isStreakPendingSync()) {
+      _setStreakPending(false);
+      return;
+    }
 
     _syncingStreak = true;
+    _setStreakPending(true);
     try {
       // Clear the flag first: a change made during the request sets it again.
       await _goalsRepository.setStreakPendingSync(false);
@@ -181,12 +189,20 @@ class GoalsViewModel extends ChangeNotifier {
         streak: current.currentStreak,
         longestStreak: current.longestStreak,
       );
+      _setStreakPending(await _goalsRepository.isStreakPendingSync());
     } catch (e) {
       debugPrint('[GoalsViewModel] streak sync postponed: $e');
       await _goalsRepository.setStreakPendingSync(true);
+      _setStreakPending(true);
     } finally {
       _syncingStreak = false;
     }
+  }
+
+  void _setStreakPending(bool value) {
+    if (_disposed || streakPendingSync == value) return;
+    streakPendingSync = value;
+    notifyListeners();
   }
 
   /// Takes the cloud streak only when this device has no local history.

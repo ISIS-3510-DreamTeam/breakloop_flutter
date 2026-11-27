@@ -105,6 +105,12 @@ class AchievementsRepository {
     }
   }
 
+  // How many unlocks are still waiting to reach the cloud.
+  Future<int> pendingCount(String uid) async {
+    final pending = await _local.getPendingUnlocks(uid);
+    return pending.length;
+  }
+
   List<Achievement> _parse(String body) {
     final list = jsonDecode(body) as List<dynamic>;
     return [

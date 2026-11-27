@@ -5,6 +5,9 @@ import '../../../core/theme/app_colors.dart';
 import '../data/achievements_catalog_api.dart';
 import '../model/achievement_progress.dart';
 import '../viewmodel/achievements_viewmodel.dart';
+
+import '../../../core/widgets/pending_sync_note.dart';
+
 import 'achievement_medal.dart';
 
 // For testing
@@ -79,6 +82,11 @@ class _AchievementsPageState extends State<AchievementsPage> {
                   'Offline: showing last saved data',
                   style: TextStyle(color: AppColors.darkCoffee),
                 ),
+              ),
+              if (vm.pendingUnlocks > 0)
+                PendingSyncNote(
+                  message: '${vm.pendingUnlocks} achievement(s) waiting to sync. '
+                      "They will upload when you're back online.",
               ),
             Expanded(
               child: GridView.builder(

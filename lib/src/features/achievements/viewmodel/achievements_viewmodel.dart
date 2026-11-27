@@ -33,6 +33,9 @@ class AchievementsViewModel extends ChangeNotifier {
   List<AchievementProgress> items = const [];
   bool fromCache = false;
 
+  // Unlocks that are still waiting to reach the cloud. Read by the UI.
+  int pendingUnlocks = 0;
+
   Future<void> load() async {
     final requestId = ++_requestId;
     status = AchievementsStatus.loading;
@@ -49,12 +52,15 @@ class AchievementsViewModel extends ChangeNotifier {
         catalog: catalog.catalog,
         input: input,
       );
+      // evaluate() already tried to upload, so this is what is still left.
+      final pending = await _achievements.pendingCount(uid);
 
       // Ignore results from an older request that finished later.
       if (requestId != _requestId) return;
 
       items = progress;
       fromCache = catalog.fromCache;
+      pendingUnlocks = pending;
       status =
       items.isEmpty ? AchievementsStatus.empty : AchievementsStatus.content;
     } catch (e, st) {

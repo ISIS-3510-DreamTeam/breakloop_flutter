@@ -28,7 +28,7 @@ class StreakSimulationInput {
     required this.minutes,
     required this.weekdays,
     required this.startWeekday,
-    this.simulations = 10000, //TODO: check if this is too high
+    this.simulations = 20000,
     this.horizonDays = 30, // A month
     this.streakLength = 7, // A week
     this.minGoal = 15,
