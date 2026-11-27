@@ -318,6 +318,12 @@ class ProfileViewModel extends ChangeNotifier {
     }
   }
 
+  // Loads and uploads can finish after the user left the screen, so skip the update then
+  @override
+  void notifyListeners() {
+    if (!_isDisposed) super.notifyListeners();
+  }
+
   @override
   void dispose() {
     // Stop listening to Firestore, the connection and the worker when the screen is closed

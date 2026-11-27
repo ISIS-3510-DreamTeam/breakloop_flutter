@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -313,11 +314,27 @@ class _MyProfilePageState extends State<MyProfilePage> {
     if (source == null || !mounted) return;
 
     //The full photo is sent to the ViewModel, which compresses it in an Isolate
-    final picked = await ImagePicker().pickImage(source: source);
-    if (picked == null || !mounted) return;
+    final Uint8List bytes;
+    try {
+      final picked = await ImagePicker().pickImage(source: source);
+      if (picked == null) return;
+      bytes = await picked.readAsBytes();
+    } catch (e) {
+      //No camera app, the picker was already open, or the file could not be read
+      debugPrint('[MyProfilePage] pickImage failed: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(source == ImageSource.camera
+              ? "We couldn't open the camera"
+              : "We couldn't open your photos"),
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
 
-    final vm = context.read<ProfileViewModel>();
-    await vm.changePhoto(await picked.readAsBytes());
+    await context.read<ProfileViewModel>().changePhoto(bytes);
   }
 
   Widget _buildSheetOption(BuildContext sheetContext, IconData icon, String label, ImageSource source) {
