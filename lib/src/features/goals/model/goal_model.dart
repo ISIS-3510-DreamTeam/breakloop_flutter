@@ -5,6 +5,7 @@ class GoalModel {
   final int? pendingDailyLimitMinutes;
 
   final int currentStreak;
+  final int longestStreak;
   final DateTime? lastEvaluationDate;
 
   //Bool for checking if the streak was broken today
@@ -15,6 +16,7 @@ class GoalModel {
     this.dailyLimitMinutes,
     this.pendingDailyLimitMinutes,
     this.currentStreak = 0,
+    this.longestStreak = 0,
     this.lastEvaluationDate,
     this.streakBrokenToday = false,
   });
@@ -23,13 +25,15 @@ class GoalModel {
 
   factory GoalModel.fromMap(Map<String, dynamic>? data) {
     if (data == null) return const GoalModel();
+
+    final lastEvaluation = data['lastEvaluationDate'] as String?;
+
     return GoalModel(
       dailyLimitMinutes: data['dailyLimitMinutes'] as int?,
       pendingDailyLimitMinutes: data['pendingDailyLimitMinutes'] as int?,
       currentStreak: data['currentStreak'] as int? ?? 0,
-      lastEvaluationDate: data['lastEvaluationDate'] != null
-        ? DateTime.parse(data['lastStreakUpdate'] as String)
-        : null,
+      longestStreak: data['longestStreak'] as int? ?? 0,
+      lastEvaluationDate: lastEvaluation != null ? DateTime.parse(lastEvaluation) : null,
       streakBrokenToday: data['streakBrokenToday'] as bool? ?? false,
     );
   }
@@ -38,7 +42,8 @@ class GoalModel {
     'dailyLimitMinutes': dailyLimitMinutes,
     'pendingDailyLimitMinutes': pendingDailyLimitMinutes,
     'currentStreak': currentStreak,
-    'lastStreakUpdate': lastEvaluationDate?.toIso8601String(),
+    'longestStreak': longestStreak,
+    'lastEvaluationDate': lastEvaluationDate?.toIso8601String(),
     'streakBrokenToday': streakBrokenToday,
   };
 }

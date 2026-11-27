@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../../pet/data/pet_api.dart' show backUrl;
 
-/// GET /api/achievements. Public endpoint.
+// GET /api/achievements. Public endpoint.
 class AchievementsCatalogApi {
   AchievementsCatalogApi({http.Client? client, String baseUrl = backUrl})
       : _client = client ?? http.Client(),

@@ -1,6 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 
-/// Unlocked achievements per user. isSynced is reserved for the upload step, later.
+// Unlocked achievements per user. isSynced is reserved for the upload step, later.
 class AchievementsLocalDatasource {
   Database? _database;
 
@@ -21,7 +21,7 @@ class AchievementsLocalDatasource {
     );
   }
 
-  /// Saves the unlocks that are not stored yet. An existing row keeps its original date.
+  // Saves the unlocks that are not stored yet. An existing row keeps its original date.
   Future<void> insertUnlocks(String uid, Map<String, int> unlockedAtById) async {
     final db = await _db();
     final batch = db.batch();
@@ -40,7 +40,7 @@ class AchievementsLocalDatasource {
     await batch.commit(noResult: true);
   }
 
-  /// Achievement id → unlock time in epoch milliseconds.
+  // Achievement id, then unlock time in epoch milliseconds.
   Future<Map<String, int>> getUnlocks(String uid) async {
     final rows = await (await _db()).query(
       'achievements',
@@ -53,7 +53,7 @@ class AchievementsLocalDatasource {
     };
   }
 
-  /// Deletes every unlock of one user. Only used by the developer tools.
+  // Deletes every unlock of one user. Only used by the developer tools.
   Future<void> deleteUnlocks(String uid) async {
     final db = await _db();
     await db.delete('achievements', where: 'uid = ?', whereArgs: [uid]);

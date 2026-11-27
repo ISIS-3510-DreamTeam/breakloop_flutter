@@ -20,7 +20,7 @@ class AchievementsRepository {
   final AchievementsCatalogStore _store;
   final AchievementsLocalDatasource _local;
 
-  /// Network first. If it fails, the last saved catalog is used and fromCache is true.
+  // Network first. If it fails, the last saved catalog is used and fromCache is true.
   Future<({List<Achievement> catalog, bool fromCache})> loadCatalog() async {
     try {
       final body = await _api.fetchCatalogJson();
@@ -33,15 +33,14 @@ class AchievementsRepository {
     }
   }
 
-  /// Evaluates the rules in a separate isolate and stores the new unlocks.
+  // Evaluates the rules in a separate isolate and stores the new unlocks.
   Future<List<AchievementProgress>> evaluate({
     required String uid,
     required List<Achievement> catalog,
     required EvaluationInput input,
   }) async {
     // Only local variables are used inside the closure, so the isolate gets plain data.
-    final evaluated =
-    await Isolate.run(() => evaluateAchievements(catalog, input));
+    final evaluated = await Isolate.run(() => evaluateAchievements(catalog, input));
 
     final now = DateTime.now().millisecondsSinceEpoch;
     final newUnlocks = {
@@ -62,7 +61,7 @@ class AchievementsRepository {
     ];
   }
 
-  /// Developer tools only: removes the stored unlocks of one user.
+  // Developer tools only: removes the stored unlocks of one user.
   Future<void> deleteUnlocks(String uid) => _local.deleteUnlocks(uid);
 
   List<Achievement> _parse(String body) {

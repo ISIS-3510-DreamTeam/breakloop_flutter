@@ -1,16 +1,25 @@
-import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
 
-/// Keeps the last catalog received from the backend, for when there is no network.
+import 'package:path_provider/path_provider.dart';
+
+// Keeps the last catalog received from the backend, in a file, for when there is no network.
 class AchievementsCatalogStore {
-  static const _key = 'achievements_catalog_json';
+  Future<File> _file() async {
+    final dir = await getApplicationSupportDirectory();
+    return File('${dir.path}/achievements_catalog.json');
+  }
 
+  // Writes a temporary file first, so a crash never leaves a half-written catalog.
   Future<void> save(String json) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_key, json);
+    final file = await _file();
+    final temp = File('${file.path}.tmp');
+    await temp.writeAsString(json, flush: true);
+    await temp.rename(file.path);
   }
 
   Future<String?> read() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_key);
+    final file = await _file();
+    if (!await file.exists()) return null;
+    return file.readAsString();
   }
 }

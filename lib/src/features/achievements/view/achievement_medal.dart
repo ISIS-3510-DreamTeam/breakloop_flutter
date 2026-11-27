@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 
 import '../model/achievement_progress.dart';
 
-/// Medal image from the backend, cached on disk by cached_network_image.
-/// Locked medals are shown in grayscale and dimmed.
+// Medal image from the backend, cached on disk by cached_network_image.
+// Locked medals are shown in grayscale and dimmed.
 class AchievementMedal extends StatelessWidget {
   const AchievementMedal({
     super.key,
