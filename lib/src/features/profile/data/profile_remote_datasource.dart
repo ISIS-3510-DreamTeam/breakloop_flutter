@@ -106,4 +106,18 @@ class ProfileRemoteDatasource {
         .update({'photoUrl': photoUrl});
     return photoUrl;
   }
+
+  // Removes the photo from Storage and from the profile.
+  Future<void> deletePhoto(String uid) async {
+    try {
+      await _storage.ref('profile_photos/$uid.jpg').delete();
+    } on FirebaseException catch (e) {
+      // Already removed, only the profile has to be updated
+      if (e.code != 'object-not-found') rethrow;
+    }
+    await _firestore
+        .collection('users')
+        .doc(uid)
+        .update({'photoUrl': FieldValue.delete()});
+  }
 }

@@ -232,7 +232,7 @@ class ProfileViewModel extends ChangeNotifier {
     notifyListeners();
 
     if (!await _repository.isOnline()) {
-      await _repository.queuePhotoUpload(profile.uid);
+      await _repository.queuePhotoSync(profile.uid);
       _state = _state.copyWith(
         isUploadingPhoto: false,
         hasPendingChanges: true,
@@ -255,7 +255,7 @@ class ProfileViewModel extends ChangeNotifier {
     }).catchError((Object e) async {
       debugPrint('[ProfileViewModel] uploadPhoto failed: $e');
       // The photo is already on the device, so the worker retries the upload
-      await _repository.queuePhotoUpload(profile.uid);
+      await _repository.queuePhotoSync(profile.uid);
       if (_isDisposed) return;
       _state = _state.copyWith(
         isUploadingPhoto: false,
@@ -265,6 +265,53 @@ class ProfileViewModel extends ChangeNotifier {
       );
       notifyListeners();
     });
+  }
+
+  // Removes the profile photo.
+  // Without connection the photo is hidden right away and the worker removes it later
+  Future<void> removePhoto() async {
+    final profile = _state.profile;
+    if (!_state.isOwnProfile || profile == null || _state.isUploadingPhoto) {
+      return;
+    }
+
+    // Show the profile without photo right away
+    _state = _state.copyWith(
+      profile: profile.copyWith(removePhoto: true),
+      removeLocalPhoto: true,
+      isUploadingPhoto: true,
+    );
+    notifyListeners();
+
+    String? errorMessage;
+    var hasPendingChanges = _state.hasPendingChanges;
+    try {
+      await _repository.removeLocalPhoto(profile.uid);
+      if (!await _repository.isOnline()) {
+        await _repository.queuePhotoSync(profile.uid);
+        hasPendingChanges = true;
+        errorMessage =
+            "You're offline. Your photo will be removed when you're back online";
+      } else {
+        await _repository.deletePhoto(profile.uid);
+        hasPendingChanges = await _repository.hasPendingChanges(profile.uid);
+      }
+    } catch (e) {
+      debugPrint('[ProfileViewModel] removePhoto failed: $e');
+      // The file is already gone, so the worker retries removing it from Storage
+      await _repository.queuePhotoSync(profile.uid).catchError(
+          (Object e) => debugPrint('[ProfileViewModel] queuePhotoSync failed: $e'));
+      hasPendingChanges = true;
+      errorMessage =
+          "We couldn't remove your photo. We'll try again automatically";
+    } finally {
+      _state = _state.copyWith(
+        isUploadingPhoto: false,
+        hasPendingChanges: hasPendingChanges,
+        errorMessage: errorMessage,
+      );
+      notifyListeners();
+    }
   }
 
   // Changes the name of the logged user.

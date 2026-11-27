@@ -58,7 +58,7 @@ class ProfileRepository {
   Future<ProfileModel?> getStoredOwnProfile(String uid) async {
     final profile = await _localDatasource.getOwnProfile(uid);
     if (profile == null) return null;
-    return _withPendingName(profile);
+    return _withPendingChanges(profile);
   }
 
   // Gets the last saved profile of a friend and when it was downloaded
@@ -79,8 +79,8 @@ class ProfileRepository {
   Future<ProfileModel> refreshOwnProfile(String uid) async {
     final profile = await _remoteDatasource.fetchProfile(uid);
     await _localDatasource.saveOwnProfile(profile);
-    // Firestore does not have the pending name yet, so keep showing it
-    return _withPendingName(profile);
+    // Firestore does not have the pending changes yet, so keep showing them
+    return _withPendingChanges(profile);
   }
 
   // Emits a friend's profile every time it changes and saves each version
@@ -124,8 +124,22 @@ class ProfileRepository {
     return photoUrl;
   }
 
-  // Marks the saved photo file to be uploaded by the worker when there is connection
-  Future<void> queuePhotoUpload(String uid) async {
+  // Removes the photo saved on the device, so it is not shown or uploaded anymore
+  Future<void> removeLocalPhoto(String uid) => _photoStorage.deletePhoto(uid);
+
+  // Removes the photo from Storage and the profile
+  Future<void> deletePhoto(String uid) async {
+    await _remoteDatasource.deletePhoto(uid);
+    await _localDatasource.setPendingPhoto(uid, false);
+    await _updateStoredOwnProfile(
+      uid,
+      (profile) => profile.copyWith(removePhoto: true),
+    );
+  }
+
+  // Lets the worker make the photo in Storage match the device when there is
+  // connection: it uploads the saved file, or removes the photo if there is no file
+  Future<void> queuePhotoSync(String uid) async {
     await _localDatasource.setPendingPhoto(uid, true);
     await ProfileSyncWorker.schedule(uid);
   }
@@ -156,19 +170,26 @@ class ProfileRepository {
     if (await _localDatasource.hasPendingPhoto(uid)) {
       final photo = await _photoStorage.readPhoto(uid);
       if (photo == null) {
-        await _localDatasource.setPendingPhoto(uid, false);
+        await deletePhoto(uid);
       } else {
         await uploadPhoto(uid, photo);
       }
     }
   }
 
-  // Shows the name changed offline instead of the one in Firestore
-  Future<ProfileModel> _withPendingName(ProfileModel profile) async {
+  // Shows the name and photo changed offline instead of the ones in Firestore
+  Future<ProfileModel> _withPendingChanges(ProfileModel profile) async {
     final pendingName = await _localDatasource.getPendingName(profile.uid);
-    return pendingName == null
+    var result = pendingName == null
         ? profile
         : profile.copyWith(displayName: pendingName);
+
+    // A photo removed offline is still in Firestore until the worker removes it
+    if (await _localDatasource.hasPendingPhoto(profile.uid) &&
+        await _photoStorage.readPhoto(profile.uid) == null) {
+      result = result.copyWith(removePhoto: true);
+    }
+    return result;
   }
 
   // Keeps the saved own profile equal to Firestore after a change

@@ -71,11 +71,12 @@ class ProfileModel {
   }
 
   // Creates a new profile while keeping the values that were not changed
-  ProfileModel copyWith({String? displayName, String? photoUrl}) {
+  // removePhoto leaves the profile without photo, since a null photoUrl means "keep it"
+  ProfileModel copyWith({String? displayName, String? photoUrl, bool removePhoto = false}) {
     return ProfileModel(
       uid: uid,
       displayName: displayName ?? this.displayName,
-      photoUrl: photoUrl ?? this.photoUrl,
+      photoUrl: removePhoto ? null : photoUrl ?? this.photoUrl,
       friendCode: friendCode,
       streak: streak,
       petId: petId,

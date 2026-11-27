@@ -98,7 +98,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
                   )
                 : Padding(
                     padding: const EdgeInsets.only(right: 8),
-                    child: AppPill(label: '✎ Edit', small: true, onTap: _startEditing),
+                    child: AppPill(label: '✎ Edit', onTap: _startEditing),
                   ),
         ],
       ),
@@ -260,8 +260,8 @@ class _MyProfilePageState extends State<MyProfilePage> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Your pet', style: _labelStyle()),
-              Text(petLabel(petId, petMood), style: _footerStyle()),
+              Text('Your pet', style: _labelStyle()?.copyWith(fontSize: 16)),
+              Text(petLabel(petId, petMood), style: _footerStyle().copyWith(fontSize: 14)),
             ],
           ),
         ],
@@ -286,7 +286,10 @@ class _MyProfilePageState extends State<MyProfilePage> {
   }
 
   Future<void> _showPhotoSheet() async {
-    final source = await showModalBottomSheet<ImageSource>(
+    final state = context.read<ProfileViewModel>().state;
+    final hasPhoto = state.localPhoto != null || state.profile?.photoUrl != null;
+
+    final action = await showModalBottomSheet<_PhotoAction>(
       context: context,
       backgroundColor: AppColors.snow,
       shape: const RoundedRectangleBorder(
@@ -302,16 +305,27 @@ class _MyProfilePageState extends State<MyProfilePage> {
             children: [
               Text('PROFILE PHOTO', style: AppTextStyles.monoLabel),
               const SizedBox(height: 12),
-              _buildSheetOption(sheetContext, Icons.photo_camera, 'Take photo', ImageSource.camera),
+              _buildSheetOption(sheetContext, Icons.photo_camera, 'Take photo', _PhotoAction.camera),
               const SizedBox(height: 12),
-              _buildSheetOption(sheetContext, Icons.photo_library, 'Choose from gallery', ImageSource.gallery),
+              _buildSheetOption(sheetContext, Icons.photo_library, 'Choose from gallery', _PhotoAction.gallery),
               const SizedBox(height: 12),
+              //Only when there is a photo to remove
+              if (hasPhoto) ...[
+                _buildSheetOption(sheetContext, Icons.delete_outline, 'Remove photo', _PhotoAction.remove),
+                const SizedBox(height: 12),
+              ],
             ],
           ),
         ),
       ),
     );
-    if (source == null || !mounted) return;
+    if (action == null || !mounted) return;
+
+    if (action == _PhotoAction.remove) {
+      await context.read<ProfileViewModel>().removePhoto();
+      return;
+    }
+    final source = action == _PhotoAction.camera ? ImageSource.camera : ImageSource.gallery;
 
     //The full photo is sent to the ViewModel, which compresses it in an Isolate
     final Uint8List bytes;
@@ -337,9 +351,9 @@ class _MyProfilePageState extends State<MyProfilePage> {
     await context.read<ProfileViewModel>().changePhoto(bytes);
   }
 
-  Widget _buildSheetOption(BuildContext sheetContext, IconData icon, String label, ImageSource source) {
+  Widget _buildSheetOption(BuildContext sheetContext, IconData icon, String label, _PhotoAction action) {
     return GestureDetector(
-      onTap: () => Navigator.pop(sheetContext, source),
+      onTap: () => Navigator.pop(sheetContext, action),
       child: AppCard(
         color: Colors.white,
         shadowOffset: const Offset(0, 4),
@@ -363,3 +377,6 @@ class _MyProfilePageState extends State<MyProfilePage> {
     return Theme.of(context).textTheme.bodyMedium!.copyWith(fontSize: 12, fontWeight: FontWeight.w600);
   }
 }
+
+//Options of the profile photo sheet
+enum _PhotoAction { camera, gallery, remove }

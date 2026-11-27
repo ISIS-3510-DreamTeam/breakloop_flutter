@@ -22,4 +22,10 @@ class ProfilePhotoStorage {
     await file.parent.create(recursive: true);
     await file.writeAsBytes(photo, flush: true);
   }
+
+  // Removes the saved photo, if there is one
+  Future<void> deletePhoto(String uid) async {
+    final file = await _file(uid);
+    if (await file.exists()) await file.delete();
+  }
 }

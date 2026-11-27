@@ -53,10 +53,11 @@ class ProfileUiState {
     DateTime? lastUpdated,
     bool? isOffline,
     String? errorMessage,
+    bool removeLocalPhoto = false,
   }) {
     return ProfileUiState(
       profile: profile ?? this.profile,
-      localPhoto: localPhoto ?? this.localPhoto,
+      localPhoto: removeLocalPhoto ? null : localPhoto ?? this.localPhoto,
       isOwnProfile: isOwnProfile ?? this.isOwnProfile,
       isLoading: isLoading ?? this.isLoading,
       isUploadingPhoto: isUploadingPhoto ?? this.isUploadingPhoto,
