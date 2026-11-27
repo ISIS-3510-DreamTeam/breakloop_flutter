@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../features/auth/data/auth_repository.dart';
 
+import '../../features/achievements/view/achievements_card.dart';
 import '../../features/goals/view/goal_progress_card.dart';
 import '../../features/pet/view/pet_card.dart';
 
@@ -32,7 +33,10 @@ class _HomePageState extends State<HomePage> {
             children: [
               GoalProgressCard(),
               const SizedBox(height: 50),
-              const PetCard()
+              const PetCard(),
+              const SizedBox(height: 50),
+              const AchievementsCard(),
+              const SizedBox(height: 24),
             ],
           )
         ),

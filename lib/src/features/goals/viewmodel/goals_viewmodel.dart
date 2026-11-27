@@ -1,4 +1,3 @@
-
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 
@@ -9,6 +8,7 @@ import '../model/daily_progress.dart';
 import 'package:breakloop_flutter/src/features/screen_time_progress/model/daily_screen_time.dart';
 import 'package:breakloop_flutter/src/features/screen_time_progress/data/screen_time_repository.dart';
 
+import '../data/progress_remote_datasource.dart';
 import '../data/streak_simulation_service.dart';
 import '../model/streak_simulation_result.dart';
 
@@ -25,9 +25,11 @@ class GoalsViewModel extends ChangeNotifier {
   final GoalsRepository _goalsRepository;
   final ScreenTimeRepository _screenTimeRepository;
   final StreakSimulationService _streakSimulationService;
+  final ProgressRemoteDatasource _progressRemote;
   bool _disposed = false;
   Timer? _refreshTimer;
   bool _isProcessingRollover = false;
+  bool _syncingStreak = false;
 
 
   //identifier to prevent race-conditions
@@ -43,9 +45,13 @@ class GoalsViewModel extends ChangeNotifier {
   GoalsViewModel(
       this._goalsRepository,
       this._screenTimeRepository,
-      {this._streakSimulationService = const StreakSimulationService()})
+      {this._streakSimulationService = const StreakSimulationService(),
+        ProgressRemoteDatasource? progressRemote})
+      : _progressRemote = progressRemote ?? ProgressRemoteDatasource()
   {
     _subscribeToGoal();
+    // A device without local history takes the streak saved in the cloud.
+    unawaited(_restoreStreakFromCloud());
     //We added a timer to refresh data every minute.
     _refreshTimer = Timer.periodic(const Duration(minutes: 1), (_)=>reloadUsage());
   }
@@ -54,6 +60,9 @@ class GoalsViewModel extends ChangeNotifier {
   GoalModel goal = const GoalModel();
   DailyProgress? progress;
 
+  // True while the streak is waiting to reach the cloud. Read by the UI.
+  bool streakPendingSync = false;
+
   void _subscribeToGoal() {
     _goalsRepository.watchGoal().listen((updatedGoal) async {
 
@@ -61,6 +70,7 @@ class GoalsViewModel extends ChangeNotifier {
           'dailyLimit=${updatedGoal.dailyLimitMinutes}, '
           'pending=${updatedGoal.pendingDailyLimitMinutes}, '
           'streak=${updatedGoal.currentStreak}, '
+          'longest=${updatedGoal.longestStreak}, '
           'lastEval=${updatedGoal.lastEvaluationDate}, '
           'broken=${updatedGoal.streakBrokenToday}');
 
@@ -80,6 +90,8 @@ class GoalsViewModel extends ChangeNotifier {
   Future<void> _refreshGoalState() async {
     await _handleDayRolloverIfNeeded(goal);
     await _loadTodayUsage(goal.dailyLimitMinutes!);
+    // Retries the upload here, so a failed sync is tried again every minute.
+    unawaited(_syncPendingStreak());
   }
 
   Future<void> reloadUsage() async {
@@ -107,6 +119,7 @@ class GoalsViewModel extends ChangeNotifier {
         currentStreak: newStreak,
         lastEvaluationDate: today,
       );
+      await _goalsRepository.setStreakPendingSync(true);
     } finally {
       _isProcessingRollover = false;
     }
@@ -145,6 +158,7 @@ class GoalsViewModel extends ChangeNotifier {
           lastEvaluationDate: goal.lastEvaluationDate ?? _dateOnly(DateTime.now()),
           streakBrokenToday: true,
         );
+        await _goalsRepository.setStreakPendingSync(true);
       }
 
     } catch (e) {
@@ -153,6 +167,60 @@ class GoalsViewModel extends ChangeNotifier {
       status = GoalsStatus.error;
     }
     notifyListeners();
+  }
+
+  // Uploads the streak when it changed. If the request fails, the flag stays
+  // set and the next refresh tries again.
+  Future<void> _syncPendingStreak() async {
+    if (_syncingStreak) return;
+
+    if (!await _goalsRepository.isStreakPendingSync()) {
+      _setStreakPending(false);
+      return;
+    }
+
+    _syncingStreak = true;
+    _setStreakPending(true);
+    try {
+      // Clear the flag first: a change made during the request sets it again.
+      await _goalsRepository.setStreakPendingSync(false);
+      final current = await _goalsRepository.getCurrentGoal();
+      await _progressRemote.putStreak(
+        streak: current.currentStreak,
+        longestStreak: current.longestStreak,
+      );
+      _setStreakPending(await _goalsRepository.isStreakPendingSync());
+    } catch (e) {
+      debugPrint('[GoalsViewModel] streak sync postponed: $e');
+      await _goalsRepository.setStreakPendingSync(true);
+      _setStreakPending(true);
+    } finally {
+      _syncingStreak = false;
+    }
+  }
+
+  void _setStreakPending(bool value) {
+    if (_disposed || streakPendingSync == value) return;
+    streakPendingSync = value;
+    notifyListeners();
+  }
+
+  /// Takes the cloud streak only when this device has no local history.
+  Future<void> _restoreStreakFromCloud() async {
+    try {
+      final local = await _goalsRepository.getCurrentGoal();
+      if (local.lastEvaluationDate != null) return;
+
+      final remote = await _progressRemote.fetchStreak();
+      if (remote.streak == 0 && remote.longestStreak == 0) return;
+
+      await _goalsRepository.restoreStreak(
+        streak: remote.streak,
+        longestStreak: remote.longestStreak,
+      );
+    } catch (e) {
+      debugPrint('[GoalsViewModel] streak restore postponed: $e');
+    }
   }
 
   DailyScreenTime? _findToday(List<DailyScreenTime> records) {

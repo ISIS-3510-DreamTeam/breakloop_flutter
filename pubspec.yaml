@@ -51,6 +51,7 @@ dependencies:
   flutter_svg: ^2.3.2
   sqflite: ^2.4.5
   workmanager: ^0.10.10
+  cached_network_image: ^4.0.3
 
 dev_dependencies:
   flutter_test:
