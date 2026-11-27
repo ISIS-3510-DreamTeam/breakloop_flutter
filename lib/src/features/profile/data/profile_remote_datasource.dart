@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 import '../model/profile_model.dart';
@@ -84,11 +85,13 @@ class ProfileRemoteDatasource {
   }
 
   // Saves the new display name of the user.
-  Future<void> updateDisplayName(String uid, String displayName) {
-    return _firestore
+  Future<void> updateDisplayName(String uid, String displayName) async {
+    await _firestore
         .collection('users')
         .doc(uid)
         .update({'displayName': displayName});
+    // Also in Firebase Auth, so the rest of the app (Home) shows the new name
+    await FirebaseAuth.instance.currentUser?.updateDisplayName(displayName);
   }
 
   // Uploads the photo, saves its URL in the profile and returns it.

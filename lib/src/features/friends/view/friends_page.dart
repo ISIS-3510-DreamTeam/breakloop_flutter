@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../model/friend_model.dart';
@@ -71,6 +72,8 @@ class _FriendsPageState extends State<FriendsPage> {
                 'Encouragement, not race',
                 style: textTheme.bodyMedium?.copyWith(fontSize: 13, color: AppColors.spicyPaprika),
               ),
+              const SizedBox(height: 10),
+              AppPill(label: 'My profile', small: true, onTap: () => context.push('/social/profile')),
             ],
           ),
         ),
@@ -237,7 +240,10 @@ class _FriendsPageState extends State<FriendsPage> {
       for (final friend in state.friends)
         Padding(
           padding: const EdgeInsets.only(bottom: 12),
-          child: _buildFriendCard(friend),
+          child: GestureDetector(
+            onTap: () => context.push('/social/friend/${friend.uid}'),
+            child: _buildFriendCard(friend),
+          ),
         ),
     ];
   }
