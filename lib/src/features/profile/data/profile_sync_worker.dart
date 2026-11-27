@@ -68,7 +68,10 @@ class ProfileSyncWorker {
       }
       // Wait for the saved session, Firestore and Storage rules need the user
       final user = await FirebaseAuth.instance.authStateChanges().first;
-      if (user?.uid != uid) return true;
+      // Session not restored yet, so try again later instead of losing the changes
+      if (user == null) throw StateError('No user session yet');
+      // Another account logged in, these changes are not theirs
+      if (user.uid != uid) return true;
 
       await ProfileRepository().syncPendingChanges(uid);
       return true;
