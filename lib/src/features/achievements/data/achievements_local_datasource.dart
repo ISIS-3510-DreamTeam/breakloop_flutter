@@ -52,4 +52,11 @@ class AchievementsLocalDatasource {
       for (final row in rows) row['achievementId'] as String: row['unlockedAt'] as int,
     };
   }
+
+  /// Deletes every unlock of one user. Only used by the developer tools.
+  Future<void> deleteUnlocks(String uid) async {
+    final db = await _db();
+    await db.delete('achievements', where: 'uid = ?', whereArgs: [uid]);
+  }
+
 }

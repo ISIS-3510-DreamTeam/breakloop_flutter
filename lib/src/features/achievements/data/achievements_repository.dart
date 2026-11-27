@@ -62,6 +62,9 @@ class AchievementsRepository {
     ];
   }
 
+  /// Developer tools only: removes the stored unlocks of one user.
+  Future<void> deleteUnlocks(String uid) => _local.deleteUnlocks(uid);
+
   List<Achievement> _parse(String body) {
     final list = jsonDecode(body) as List<dynamic>;
     return [

@@ -7,6 +7,9 @@ import '../model/achievement_progress.dart';
 import '../viewmodel/achievements_viewmodel.dart';
 import 'achievement_medal.dart';
 
+// For testing
+import 'dev_tools.dart';
+
 class AchievementsPage extends StatefulWidget {
   const AchievementsPage({super.key});
 
@@ -31,7 +34,10 @@ class _AchievementsPageState extends State<AchievementsPage> {
     return Scaffold(
       backgroundColor: AppColors.snow,
       appBar: AppBar(
-        title: const Text('Achievements'),
+        title: DevTapTarget(
+          onUnlock: () => showStreakDebugSheet(context),
+          child: const Text('Achievements'),
+        ),
         backgroundColor: AppColors.snow,
         foregroundColor: AppColors.darkCoffee,
       ),
