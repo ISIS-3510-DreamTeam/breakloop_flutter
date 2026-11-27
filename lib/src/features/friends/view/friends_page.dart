@@ -73,13 +73,18 @@ class _FriendsPageState extends State<FriendsPage> {
                 'Encouragement, not race',
                 style: textTheme.bodyMedium?.copyWith(fontSize: 13, color: AppColors.spicyPaprika),
               ),
-              const SizedBox(height: 10),
-              AppPill(label: 'My profile', small: true, onTap: () => context.push('/social/profile')),
             ],
           ),
         ),
         const SizedBox(width: 12),
-        _buildFriendCodeCard(state),
+        //The user's own things: the profile above and the code below
+        Column(
+          children: [
+            AppPill(label: 'My profile', small: true, onTap: () => context.push('/social/profile')),
+            const SizedBox(height: 8),
+            _buildFriendCodeCard(state),
+          ],
+        ),
       ],
     );
   }

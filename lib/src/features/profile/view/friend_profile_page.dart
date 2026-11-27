@@ -44,9 +44,17 @@ class FriendProfilePage extends StatelessWidget {
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: 20),
-                      _buildStreakCard(context, profile),
-                      const SizedBox(height: 16),
-                      _buildPetCard(context, profile),
+                      //Streak on the left and pet on the right, same height
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(child: _buildStreakCard(context, profile)),
+                            const SizedBox(width: 12),
+                            Expanded(child: _buildPetCard(context, profile)),
+                          ],
+                        ),
+                      ),
                       if (state.errorMessage != null) ...[
                         const SizedBox(height: 16),
                         Text(
@@ -121,20 +129,16 @@ class FriendProfilePage extends StatelessWidget {
     return AppCard(
       color: Colors.white,
       shadowOffset: const Offset(0, 4),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('🔥', style: TextStyle(fontSize: 28)),
-          const SizedBox(width: 14),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Current streak', style: _footerStyle(context)),
-              Text(
-                '${profile.streak} ${profile.streak == 1 ? 'day' : 'days'}',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ],
+          const Text('🔥', style: TextStyle(fontSize: 40)),
+          const SizedBox(height: 8),
+          Text('Current streak', style: _footerStyle(context).copyWith(fontSize: 14)),
+          Text(
+            '${profile.streak} ${profile.streak == 1 ? 'day' : 'days'}',
+            style: Theme.of(context).textTheme.titleLarge,
           ),
         ],
       ),
@@ -145,20 +149,20 @@ class FriendProfilePage extends StatelessWidget {
     return AppCard(
       color: AppColors.inputFill,
       shadowOffset: const Offset(0, 4),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           PetThumbnail(petId: profile.petId, petMood: profile.petMood, size: 64),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Pet',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 13, letterSpacing: 0),
-              ),
-              Text(petLabel(profile.petId, profile.petMood), style: _footerStyle(context)),
-            ],
+          const SizedBox(height: 8),
+          Text(
+            'Pet',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 16, letterSpacing: 0),
+          ),
+          Text(
+            petLabel(profile.petId, profile.petMood),
+            textAlign: TextAlign.center,
+            style: _footerStyle(context).copyWith(fontSize: 14),
           ),
         ],
       ),
