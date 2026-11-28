@@ -20,6 +20,7 @@ import '../features/profile/data/profile_repository.dart';
 import '../features/profile/view/friend_profile_page.dart';
 import '../features/profile/view/my_profile_page.dart';
 import '../features/profile/viewmodel/profile_viewmodel.dart';
+import '../features/achievements/view/achievements_page.dart';
 
 //Add here additional routes
 import '../core/navigation/home_page.dart';
@@ -75,7 +76,17 @@ GoRouter buildRouter(AuthRepository authRepository) {
           ),
           branches: [
             StatefulShellBranch(routes: [
-              GoRoute(path: '/home', builder: (_, _) => const HomePage()),
+              GoRoute(
+                path: '/home',
+                builder: (_, _) => const HomePage(),
+                //Child route, so Achievements keeps the navBar and the back button
+                routes: [
+                  GoRoute(
+                    path: 'achievements',
+                    builder: (_, _) => const AchievementsPage(),
+                  ),
+                ],
+              ),
             ]),
             //The order of the branches must match the order of the navBar destinations in MainShell
             StatefulShellBranch(routes: [
