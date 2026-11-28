@@ -16,6 +16,10 @@ import '../features/context_aware/view/offline_page.dart';
 import '../features/context_aware/view/activity_detail_page.dart';
 import '../features/friends/view/friends_page.dart';
 import '../features/friends/viewmodel/friends_viewmodel.dart';
+import '../features/profile/data/profile_repository.dart';
+import '../features/profile/view/friend_profile_page.dart';
+import '../features/profile/view/my_profile_page.dart';
+import '../features/profile/viewmodel/profile_viewmodel.dart';
 import '../features/achievements/view/achievements_page.dart';
 
 //Add here additional routes
@@ -123,9 +127,31 @@ GoRouter buildRouter(AuthRepository authRepository) {
                 path: '/social',
                 //The ViewModel is created when the user opens the tab, after logging in
                 builder: (_, _) => ChangeNotifierProvider(
-                  create: (_) => FriendsViewModel(),
+                  create: (ctx) => FriendsViewModel(
+                    profileRepository: ctx.read<ProfileRepository>(),
+                  ),
                   child: const FriendsPage(),
                 ),
+                //Child routes, so the profiles keep the navBar and the back button
+                routes: [
+                  GoRoute(
+                    path: 'profile',
+                    builder: (_, _) => ChangeNotifierProvider(
+                      create: (ctx) => ProfileViewModel(ctx.read<ProfileRepository>())..loadProfile(),
+                      child: const MyProfilePage(),
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'friend/:uid',
+                    builder: (_, state) => ChangeNotifierProvider(
+                      create: (ctx) => ProfileViewModel(
+                        ctx.read<ProfileRepository>(),
+                        uid: state.pathParameters['uid'],
+                      )..loadProfile(),
+                      child: const FriendProfilePage(),
+                    ),
+                  ),
+                ],
               ),
             ]),
 
