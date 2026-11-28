@@ -25,18 +25,17 @@ class FocusRemoteDatasource {
         .set(session.toFirestore());
   }
 
+
   // Gets all the focus sessions stored for a user.
   Future<List<FocusSessionModel>> fetchRemoteSessions(
       String userId) async {
-    // Get the user's focus sessions ordered from newest to oldest.
     final snapshot = await _firestore
         .collection('users')
         .doc(userId)
         .collection('focusSessions')
-        .orderBy('startedAt', descending: true)
+        .orderBy('startTime', descending: true)
         .get();
 
-    // Convert each Firestore document into a FocusSessionModel.
     return snapshot.docs
         .map((doc) => FocusSessionModel.fromFirestore(doc.data(), doc.id))
         .toList();
