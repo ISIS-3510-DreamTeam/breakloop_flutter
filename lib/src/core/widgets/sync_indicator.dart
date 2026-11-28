@@ -11,8 +11,8 @@ class SyncIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final streakPending = context.watch<GoalsViewModel>().streakPendingSync;
-    final pendingUnlocks = context.watch<AchievementsViewModel>().pendingUnlocks;
+    final streakPending = context.select<GoalsViewModel, bool>((vm) => vm.streakPendingSync);
+    final pendingUnlocks = context.select<AchievementsViewModel, int>((vm) => vm.pendingUnlocks);
 
     if (!streakPending && pendingUnlocks == 0) {
       return const SizedBox.shrink();
