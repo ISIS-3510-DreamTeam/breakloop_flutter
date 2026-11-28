@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../profile/data/profile_repository.dart';
 import '../data/friends_repository.dart';
 import '../model/friend_model.dart';
 import 'friends_ui_state.dart';
@@ -25,8 +26,12 @@ class FriendsViewModel extends ChangeNotifier {
   StreamSubscription<User?>? _authSubscription;
   String? _currentUid;
 
+  // Saves the friends' profiles so they can be opened offline
+  final ProfileRepository? _profileRepository;
+
   FriendsViewModel({
     FriendsRepository? repository,
+    this._profileRepository,
     FirebaseAuth? auth,
   })  : _repository = repository ?? FriendsRepository(),
         _auth = auth ?? FirebaseAuth.instance {
@@ -121,6 +126,12 @@ class FriendsViewModel extends ChangeNotifier {
           friends: friends,
           lastUpdated: _repository.lastUpdated(uid),
         );
+
+        // Save the new friends' profiles in the background, without blocking the list
+        _profileRepository
+            ?.prefetchFriendProfiles(friends.map((f) => f.uid).toList())
+            .catchError((Object e) =>
+                debugPrint('[FriendsViewModel] prefetch failed: $e'));
       }
     } catch (e) {
       debugPrint('[FriendsViewModel] loadFriends failed: $e');

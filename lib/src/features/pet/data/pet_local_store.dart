@@ -19,6 +19,7 @@ class PetLocalStore {
   static const _syncedKey = 'pet.synced';
   static const _updatedAtKey = 'pet.updated_at';
   static const _catalogKey = 'pet.catalog_json';
+  static const _ownerUidKey = 'pet.owner_uid';
 
   // Emits the current state and then a new one after each change
   Stream<LocalPetState> get state async* {
@@ -75,6 +76,27 @@ class PetLocalStore {
       await _prefs.setBool(_syncedKey, true);
       notifyChanged();
     }
+  }
+
+  // Account the saved pet belongs to
+  Future<String?> getOwnerUid() => _prefs.getString(_ownerUidKey);
+
+  // Starts an empty pet state for another account. The catalog is kept, it is the same for everyone
+  Future<void> startForOwner(String uid) async {
+    for (final key in [_currentPetKey, _pendingPetKey, _moodKey, _syncedKey, _updatedAtKey]) {
+      await _prefs.remove(key);
+    }
+    await _prefs.setString(_ownerUidKey, uid);
+    notifyChanged();
+  }
+
+  // Saves the pet downloaded from the server, so it is already in sync
+  Future<void> restorePet(String petId, PetMood mood, int updatedAt) async {
+    await _prefs.setString(_currentPetKey, petId);
+    await _prefs.setString(_moodKey, mood.apiName);
+    await _prefs.setBool(_syncedKey, true);
+    await _prefs.setInt(_updatedAtKey, updatedAt);
+    notifyChanged();
   }
 
   Future<void> saveCatalog(String json) => _prefs.setString(_catalogKey, json);

@@ -22,6 +22,15 @@ class PetImageStorage {
     }
   }
 
+  // Removes the images of the current pet, used when another account logs in
+  Future<void> clear() async {
+    try {
+      await (await _folder).delete(recursive: true);
+    } on PathNotFoundException {
+      // Already removed (no pet yet, or another call removed it first)
+    }
+  }
+
   Future<void> startDownload() async {
     final temp = await _tempFolder;
     if (await temp.exists()) await temp.delete(recursive: true);
