@@ -16,7 +16,6 @@ class FocusRecoveryDialog extends StatelessWidget {
   });
 
   double _calculateProgress(dynamic session, dynamic uiState) {
-    // 1. Duración total: prioriza lo que tenga el session y, si no, usa selectedDurationMinutes del state
     int? totalSeconds;
 
     for (final getter in [
@@ -39,7 +38,6 @@ class FocusRecoveryDialog extends StatelessWidget {
       return 0.0;
     }
 
-    // 2. Tiempo transcurrido: primero intenta elapsedSeconds, luego (totalSeconds - remainingSeconds)
     int? elapsedSeconds;
     try {
       final elapsed = session.elapsedSeconds;
@@ -82,6 +80,56 @@ class FocusRecoveryDialog extends StatelessWidget {
     return '';
   }
 
+  Widget _buildConnectivityBanner(TextTheme textTheme) {
+    if (viewModel.isOffline) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFDE8E4),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppColors.spicyPaprika.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Text(
+          'No internet connection',
+          textAlign: TextAlign.center,
+          style: textTheme.bodyMedium?.copyWith(
+            color: AppColors.spicyPaprika,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+    }
+
+    if (viewModel.showRestoredBanner) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFDE8E4),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppColors.spicyPaprika.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Text(
+          'Internet connection restored',
+          textAlign: TextAlign.center,
+          style: textTheme.bodyMedium?.copyWith(
+            color: AppColors.spicyPaprika,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -101,15 +149,21 @@ class FocusRecoveryDialog extends StatelessWidget {
 
         return Dialog(
           backgroundColor: const Color(0xFFFAF3EC),
-          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 24,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(22, 28, 22, 24),
+            padding: const EdgeInsets.fromLTRB(22, 24, 22, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Banner dinámico de conectividad
+                _buildConnectivityBanner(textTheme),
+
                 // Ícono del reloj + badge de exclamación
                 SizedBox(
                   width: 84,

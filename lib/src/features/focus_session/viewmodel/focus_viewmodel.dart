@@ -344,11 +344,7 @@ Future<void> restoreActiveSession() async {
 
     await _repository.saveSessionLocally(completedSession);
 
-    try {
-      await _repository.syncUnsyncedSessions();
-    } catch (e) {
-      debugPrint('Could not sync completed session: $e');
-    }
+   unawaited(_syncPendingSessions());
 
     return;
   }
@@ -545,29 +541,31 @@ Future<void> finishRecoveredSession() async {
     _resetTimerState();
   }
 
-  // Completes the session when the timer reaches zero
-  Future<void> _completeFocusSession() async {
-    await _saveSessionToStorage(SessionStatus.completed);
+ 
+// Completes the session when the timer reaches zero
+Future<void> _completeFocusSession() async {
+  await _saveSessionToStorage(SessionStatus.completed);
 
-    // Keep the completed session information for the celebration dialog
-    _completionSession = _currentSession;
+  // Keep the completed session information for the celebration dialog
+  _completionSession = _currentSession;
 
-    await stopSoundscape();
+  // Stop the timer
+  _timer?.cancel();
+  _timer = null;
 
-    // Stop the timer without deleting the completed session information
-    _timer?.cancel();
-    _timer = null;
+  // Show the completion dialog immediately
+  _state = _state.copyWith(
+    isTimerRunning: false,
+    isTimerPaused: false,
+    isCompletionPending: true,
+    remainingSeconds: 0,
+  );
 
-    _state = _state.copyWith(
-      isTimerRunning: false,
-      isTimerPaused: false,
-      isCompletionPending: true,
-      remainingSeconds: 0,
-    );
+  notifyListeners();
 
-    notifyListeners();
-  }
-
+  // Stop the soundscape independently
+  await stopSoundscape();
+}
 
   // Closes the completion dialog and returns to the Focus setup screen
   void dismissCompletionDialog() {
@@ -576,53 +574,63 @@ Future<void> finishRecoveredSession() async {
     _resetTimerState();
   }
 
-    // Saves the session locally and tries to sync it with Firestore
-  Future<void> _saveSessionToStorage(SessionStatus status) async {
-    final session = _currentSession;
 
-    if (session == null) {
-      _state = _state.copyWith(
-        errorMessage: 'Error al registrar la sesión',
-      );
-      notifyListeners();
-      return;
-    }
+// Saves the session locally and starts cloud synchronization
+Future<void> _saveSessionToStorage(SessionStatus status) async {
+  final session = _currentSession;
 
-    // 5 XP if completed, 2 XP if abandoned
-    final int earnedXp =
-        (status == SessionStatus.completed) ? 5 : 2;
-
-    // Update the existing session instead of creating a new one
-    final finalSession = session.copyWith(
-      sessionStatus: status,
-      xpEarned: earnedXp,
-      elapsedSeconds: _state.elapsedSeconds,
-      remainingSeconds: _state.remainingSeconds,
-      lastUpdatedAt: DateTime.now(),
-      clearPausedAt: true,
-      isSynced: false,
+  if (session == null) {
+    _state = _state.copyWith(
+      errorMessage: 'Error al registrar la sesión',
     );
-
-    _currentSession = finalSession;
-
-    try {
-      // Save the final session locally
-      await _repository.saveSessionLocally(finalSession);
-
-      // Start cloud synchronization
-      _state = _state.copyWith(isSyncing: true);
-      notifyListeners();
-
-      await _repository.syncUnsyncedSessions();
-    } catch (e) {
-      _state = _state.copyWith(
-        errorMessage: 'No se pudo sincronizar con Firestore',
-      );
-    } finally {
-      _state = _state.copyWith(isSyncing: false);
-      notifyListeners();
-    }
+    notifyListeners();
+    return;
   }
+
+  // 5 XP if completed, 2 XP if abandoned
+  final int earnedXp =
+      (status == SessionStatus.completed) ? 5 : 2;
+
+  final finalSession = session.copyWith(
+    sessionStatus: status,
+    xpEarned: earnedXp,
+    elapsedSeconds: _state.elapsedSeconds,
+    remainingSeconds: _state.remainingSeconds,
+    lastUpdatedAt: DateTime.now(),
+    clearPausedAt: true,
+    isSynced: false,
+  );
+
+  _currentSession = finalSession;
+
+  try {
+    // Save locally first, without depending on internet
+    await _repository.saveSessionLocally(finalSession);
+
+    // Start cloud synchronization in the background
+    unawaited(_syncPendingSessions());
+  } catch (e) {
+    _state = _state.copyWith(
+      errorMessage: 'No se pudo guardar la sesión localmente',
+    );
+    notifyListeners();
+  }
+}
+
+// Synchronizes pending sessions with Firestore
+Future<void> _syncPendingSessions() async {
+  _state = _state.copyWith(isSyncing: true);
+  notifyListeners();
+
+  try {
+    await _repository.syncUnsyncedSessions();
+  } catch (e) {
+    debugPrint('Could not sync sessions: $e');
+  } finally {
+    _state = _state.copyWith(isSyncing: false);
+    notifyListeners();
+  }
+}
 
   // Resets the timer and current session information
   void _resetTimerState() {
