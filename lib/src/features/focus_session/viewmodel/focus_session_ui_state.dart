@@ -1,4 +1,5 @@
-enum Soundscape { silence, rain, fire}
+
+enum Soundscape { silence, rain, fire }
 
 class FocusSessionUiState {
   /// Selected duration for the focus session
@@ -9,6 +10,7 @@ class FocusSessionUiState {
 
   // Indicates if the custom duration is selected
   final bool isCustomSelected;
+
   // Goal written by the user for the focus session
   final String focusGoal;
 
@@ -33,6 +35,9 @@ class FocusSessionUiState {
   // Indicates if the session is being synchronized
   final bool isSyncing;
 
+  // Indicates if a session is waiting for recovery
+  final bool isRecoveryPending;
+
   // Stores an error message if something goes wrong
   final String? errorMessage;
 
@@ -48,6 +53,7 @@ class FocusSessionUiState {
     this.remainingSeconds = 0,
     this.elapsedSeconds = 0,
     this.isSyncing = false,
+    this.isRecoveryPending = false,
     this.errorMessage,
   });
 
@@ -64,6 +70,7 @@ class FocusSessionUiState {
     int? remainingSeconds,
     int? elapsedSeconds,
     bool? isSyncing,
+    bool? isRecoveryPending,
     String? errorMessage,
   }) {
     return FocusSessionUiState(
@@ -89,8 +96,9 @@ class FocusSessionUiState {
           elapsedSeconds ?? this.elapsedSeconds,
       isSyncing:
           isSyncing ?? this.isSyncing,
-      errorMessage:
-          errorMessage,
+      isRecoveryPending:
+          isRecoveryPending ?? this.isRecoveryPending,
+      errorMessage: errorMessage,
     );
   }
 }

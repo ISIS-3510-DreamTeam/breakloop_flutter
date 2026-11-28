@@ -31,6 +31,13 @@ class _MainShellState extends State<MainShell>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    // Check for a session that needs recovery when the app opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        widget.focusViewModel.restoreActiveSession();
+      }
+    });
   }
 
   // Stops the sound when the app goes to the background
@@ -40,6 +47,10 @@ class _MainShellState extends State<MainShell>
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.detached) {
       widget.focusViewModel.stopSoundscape();
+    }
+
+    if (state == AppLifecycleState.resumed) {
+      widget.focusViewModel.restoreActiveSession();
     }
   }
 

@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 
 class SoundscapeCache {
   static const String _baseUrl =
+  //descarga backend
+  //hilitos
       'https://breakloop-backend-14746672383.southamerica-west1.run.app/api/soundscapes';
 
   Future<File> getSound(String name) async {
@@ -13,14 +15,14 @@ class SoundscapeCache {
       throw ArgumentError('El nombre del sonido no puede estar vacío');
     }
 
-    // Get the application directory on the main isolate
+    // ubicacion donde pudo guardar archivos de manera persistente
     final appDir = await getApplicationDocumentsDirectory();
 
     final directoryPath = '${appDir.path}/soundscapes';
 
     // Download or retrieve the sound in a background isolate
-    final filePath = await compute(
-      _getSoundInBackground,
+    final filePath = await compute(//compute es con otro isolate
+      _getSoundInBackground, //ejecuto en isolate por separado o se tengo mi huquito de memoria y event loop
       {
         'name': name,
         'directoryPath': directoryPath,
@@ -31,6 +33,8 @@ class SoundscapeCache {
   }
 }
 
+
+//Cache
 // Top-level function executed in a background isolate
 Future<String> _getSoundInBackground(
     Map<String, String> parameters) async {
@@ -49,7 +53,6 @@ Future<String> _getSoundInBackground(
   if (await archivo.exists() && await archivo.length() > 0) {
     return archivo.path;
   }
-
   final temporal = File('${carpeta.path}/$name.tmp');
   final url = Uri.parse('${SoundscapeCache._baseUrl}/$name');
 

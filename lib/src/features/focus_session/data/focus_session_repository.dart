@@ -1,3 +1,4 @@
+
 import 'dart:convert';
 import 'dart:async';
 
@@ -8,105 +9,136 @@ import 'focus_remote_datasource.dart';
 
 /// Repository that manages local focus sessions and synchronization with Firestore
 class FocusSessionRepository {
-  //TODO: CHECK
   static final _changes = StreamController<void>.broadcast();
   Stream<void> watchChanges() => _changes.stream;
 
   final FocusRemoteDatasource _remoteDatasource;
 
-  // key used to store focus sessions locally
   static const String _storageKey = 'local_focus_sessions';
 
-  // Uses the provided remote datasource or creates a default one
   FocusSessionRepository({FocusRemoteDatasource? remoteDatasource})
       : _remoteDatasource =
             remoteDatasource ?? FocusRemoteDatasource();
 
   /// Gets the focus sessions stored locally.
   Future<List<FocusSessionModel>> getLocalSessions() async {
-    // Get access to local storage.
     final prefs = await SharedPreferences.getInstance();
-
-    // Get the stored sessions as a JSON string.
     final jsonString = prefs.getString(_storageKey);
 
-    // If there are no stored sessions, return an empty list
     if (jsonString == null) return [];
 
-    // Convert the JSON string into a list.
     final List<dynamic> jsonList = jsonDecode(jsonString);
 
-    // Convert each item into a FocusSessionModel
     return jsonList
         .map((map) => FocusSessionModel.fromMap(map))
         .toList();
   }
 
-  // Saves the current list of sessions in local storage
+  /// Saves the current list of sessions in local storage.
   Future<void> _saveLocalSessions(
       List<FocusSessionModel> sessions) async {
-    // Get access to local storage.
     final prefs = await SharedPreferences.getInstance();
 
-    // Convert the sessions into maps.
     final jsonList = sessions.map((s) => s.toMap()).toList();
 
-    // Convert the list into JSON and save it.
     await prefs.setString(_storageKey, jsonEncode(jsonList));
 
-    //TODO: Check
     _changes.add(null);
   }
 
-  // Saves a new focus session locally
+  /// Saves a new session or updates it if it already exists.
   Future<void> saveSessionLocally(
       FocusSessionModel session) async {
-    // Get the sessions already stored.
     final currentSessions = await getLocalSessions();
 
-    // Add the new session to the list
-    currentSessions.add(session);
+    final index = currentSessions.indexWhere(
+      (s) => s.id == session.id,
+    );
 
-    // Save the updated list.
+    if (index != -1) {
+      currentSessions[index] = session;
+    } else {
+      currentSessions.add(session);
+    }
+
     await _saveLocalSessions(currentSessions);
   }
 
-  // Gets only the sessions that have not been synchronized
+  /// Updates an existing session using its ID.
+  Future<void> updateSession(
+      FocusSessionModel updatedSession) async {
+    final sessions = await getLocalSessions();
+
+    final index = sessions.indexWhere(
+      (s) => s.id == updatedSession.id,
+    );
+
+    if (index == -1) return;
+
+    sessions[index] = updatedSession;
+
+    await _saveLocalSessions(sessions);
+  }
+
+  /// Gets the latest active or paused session for a user.
+  Future<FocusSessionModel?> getRecoverableSession(
+      String userId) async {
+    final sessions = await getLocalSessions();
+
+    final recoverableSessions = sessions.where((session) {
+      return session.userId == userId &&
+          (session.sessionStatus == SessionStatus.active ||
+              session.sessionStatus == SessionStatus.paused);
+    }).toList();
+
+    if (recoverableSessions.isEmpty) return null;
+
+    recoverableSessions.sort(
+      (a, b) => b.startTime.compareTo(a.startTime),
+    );
+
+    return recoverableSessions.first;
+  }
+
+  /// Gets only completed or abandoned sessions that need synchronization.
   Future<List<FocusSessionModel>> getUnsyncedSessions() async {
     final sessions = await getLocalSessions();
 
-    // Keep only sessions that still need to be uploaded
-    return sessions.where((s) => !s.isSynced).toList();
+    return sessions.where((session) {
+      final isFinished =
+          session.sessionStatus == SessionStatus.completed ||
+          session.sessionStatus == SessionStatus.abandoned;
+
+      return !session.isSynced && isFinished;
+    }).toList();
   }
 
-  // Tries to upload all unsynchronized sessions to Firestore
+  /// Tries to upload finished unsynchronized sessions to Firestore.
   Future<void> syncUnsyncedSessions() async {
-    // Get all locally stored sessions.
     final allSessions = await getLocalSessions();
 
-    // List that will contain the updated sessions
     final updatedList = <FocusSessionModel>[];
 
-    // Check each session
     for (var session in allSessions) {
-      if (!session.isSynced) {
+      final isFinished =
+          session.sessionStatus == SessionStatus.completed ||
+          session.sessionStatus == SessionStatus.abandoned;
+
+      if (!session.isSynced && isFinished) {
         try {
-          // Try to upload the session to Firestore
           await _remoteDatasource.saveSession(session);
 
-          // Mark the session as synchronized
-          updatedList.add(session.copyWith(isSynced: true));
+          updatedList.add(
+            session.copyWith(isSynced: true),
+          );
         } catch (e) {
-          // If the upload fails, keep it unsynchronized
           updatedList.add(session);
         }
       } else {
-        // Keep already synchronized sessions unchanged
         updatedList.add(session);
       }
     }
 
-    // Save the updated synchronization status locally
     await _saveLocalSessions(updatedList);
   }
 }
