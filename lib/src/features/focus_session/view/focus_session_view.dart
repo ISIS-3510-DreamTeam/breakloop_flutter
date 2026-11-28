@@ -43,7 +43,11 @@ class _FocusScreenState extends State<FocusScreen> {
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: widget.viewModel,
-      builder: (context, _) {
+      child: ActiveFocusContent(
+        viewModel: widget.viewModel,
+        onStopFocus: widget.viewModel.cancelSession,
+      ),
+      builder: (context, activeContent) {
         final state = widget.viewModel.state;
 
         return Scaffold(
@@ -52,10 +56,7 @@ class _FocusScreenState extends State<FocusScreen> {
             children: [
               Expanded(
                 child: state.isTimerRunning
-                    ? ActiveFocusContent(
-                        state: state,
-                        onStopFocus: widget.viewModel.cancelSession,
-                      )
+                    ? activeContent!
                     : FocusSetupContent(
                         state: state,
                         goalController: _goalController,
@@ -104,7 +105,9 @@ class FocusSetupContent extends StatelessWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFFFDE8E4),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.spicyPaprika.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: AppColors.spicyPaprika.withValues(alpha: 0.3),
+                ),
               ),
               child: Text(
                 'No internet connection',
@@ -122,7 +125,9 @@ class FocusSetupContent extends StatelessWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFFFDE8E4),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.spicyPaprika.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: AppColors.spicyPaprika.withValues(alpha: 0.3),
+                ),
               ),
               child: Text(
                 'Internet connection restored',
@@ -296,14 +301,14 @@ class FocusSetupContent extends StatelessWidget {
           const SizedBox(height: 8),
           TextField(
             controller: goalController,
-            maxLength: 25, // Límite de 25 caracteres
+            maxLength: 25,
             style: textTheme.labelLarge?.copyWith(
               color: AppColors.darkCoffee,
               fontWeight: FontWeight.normal,
             ),
             decoration: InputDecoration(
               hintText: 'e.g. Study Economics Reading',
-              counterText: '', // Oculta el contador numérico por defecto para mantenerlo limpio
+              counterText: '',
               focusedBorder: OutlineInputBorder(
                 borderSide: const BorderSide(
                   color: AppColors.spicyPaprika,
@@ -314,7 +319,8 @@ class FocusSetupContent extends StatelessWidget {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
             onChanged: viewModel.setFocusGoal,
           ),
@@ -475,31 +481,24 @@ class FocusSetupContent extends StatelessWidget {
   }
 }
 
-// Active focus session
+
 class ActiveFocusContent extends StatelessWidget {
-  final FocusSessionUiState state;
+  final FocusViewModel viewModel;
   final VoidCallback onStopFocus;
 
   const ActiveFocusContent({
     super.key,
-    required this.state,
+    required this.viewModel,
     required this.onStopFocus,
   });
 
   @override
   Widget build(BuildContext context) {
+    // These values do not change during the timer.
+    final initialState = viewModel.state;
     final textTheme = Theme.of(context).textTheme;
 
-    final minutes = state.remainingSeconds ~/ 60;
-    final seconds = state.remainingSeconds % 60;
-
-    final timeText =
-        '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-
-    final totalSeconds = state.selectedDurationMinutes * 60;
-    final progress = totalSeconds > 0
-        ? (state.elapsedSeconds / totalSeconds).clamp(0.0, 1.0)
-        : 0.0;
+    final totalSeconds = initialState.selectedDurationMinutes * 60;
 
     return SafeArea(
       child: Padding(
@@ -509,6 +508,7 @@ class ActiveFocusContent extends StatelessWidget {
         ),
         child: Column(
           children: [
+            // Static header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -555,6 +555,7 @@ class ActiveFocusContent extends StatelessWidget {
 
             const Spacer(),
 
+            // Static icon and illustration
             Container(
               width: 170,
               height: 170,
@@ -597,16 +598,32 @@ class ActiveFocusContent extends StatelessWidget {
 
             const SizedBox(height: 28),
 
-            Text(
-              timeText,
-              style: textTheme.displayLarge?.copyWith(
-                color: AppColors.darkCoffee,
-                fontWeight: FontWeight.bold,
-                fontSize: 64,
-              ),
+            // Only the timer text rebuilds every second
+            ListenableBuilder(
+              listenable: viewModel,
+              builder: (context, _) {
+                final remainingSeconds =
+                    viewModel.state.remainingSeconds;
+
+                final minutes = remainingSeconds ~/ 60;
+                final seconds = remainingSeconds % 60;
+
+                final timeText =
+                    '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+
+                return Text(
+                  timeText,
+                  style: textTheme.displayLarge?.copyWith(
+                    color: AppColors.darkCoffee,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 64,
+                  ),
+                );
+              },
             ),
 
-            if (state.focusGoal.trim().isNotEmpty) ...[
+            // Static focus goal
+            if (initialState.focusGoal.trim().isNotEmpty) ...[
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -622,7 +639,7 @@ class ActiveFocusContent extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  'Target: ${state.focusGoal}',
+                  'Target: ${initialState.focusGoal}',
                   style: textTheme.labelLarge?.copyWith(
                     color: AppColors.darkCoffee,
                     fontWeight: FontWeight.normal,
@@ -633,30 +650,46 @@ class ActiveFocusContent extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            Container(
-              width: 220,
-              height: 16,
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: AppColors.darkCoffee,
-                  width: 2,
-                ),
-                color: Colors.white,
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  backgroundColor: Colors.transparent,
-                  color: AppColors.spicyPaprika.withValues(alpha: 0.7),
-                ),
-              ),
+            // Only the progress indicator rebuilds every second
+            ListenableBuilder(
+              listenable: viewModel,
+              builder: (context, _) {
+                final elapsedSeconds =
+                    viewModel.state.elapsedSeconds;
+
+                final progress = totalSeconds > 0
+                    ? (elapsedSeconds / totalSeconds)
+                        .clamp(0.0, 1.0)
+                    : 0.0;
+
+                return Container(
+                  width: 220,
+                  height: 16,
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: AppColors.darkCoffee,
+                      width: 2,
+                    ),
+                    color: Colors.white,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      backgroundColor: Colors.transparent,
+                      color: AppColors.spicyPaprika
+                          .withValues(alpha: 0.7),
+                    ),
+                  ),
+                );
+              },
             ),
 
             const Spacer(),
 
+            // Static stop button
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.darkCoffee,
