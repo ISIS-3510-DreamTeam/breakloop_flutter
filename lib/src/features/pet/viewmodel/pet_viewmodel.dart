@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../core/network/network_checker.dart';
@@ -23,6 +24,12 @@ class PetViewModel extends ChangeNotifier {
     _observeXpToday();
     _repository.startListeningToBackground();
     _repository.scheduleSync();
+    // The saved pet belongs to one account, so it changes with the logged user
+    _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (user == null) return;
+      _repository.useAccount(user.uid).catchError(
+          (Object e) => debugPrint('[PetViewModel] useAccount failed: $e'));
+    });
   }
 
   final PetRepository _repository;
@@ -31,6 +38,7 @@ class PetViewModel extends ChangeNotifier {
   final CalculatePetMoodUseCase _calculateMood;
 
   StreamSubscription<dynamic>? _stateSub;
+  StreamSubscription<User?>? _authSub;
   final List<StreamSubscription<int>> _xpSubs = [];
   DateTime? _xpDay;
   int _stateRequestId = 0;
@@ -125,6 +133,7 @@ class PetViewModel extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _stateSub?.cancel();
+    _authSub?.cancel();
     for (final sub in _xpSubs) {
       sub.cancel();
     }

@@ -15,12 +15,15 @@ class AuthRepository {
     if (user == null){
       return null;
     }
-    return AppUser(uid: user.uid, email: user.email, emailVerified: user.emailVerified);
+    return AppUser(uid: user.uid, email: user.email, emailVerified: user.emailVerified, displayName: user.displayName);
   }
 
   // Subscribe to the auth state of an user. With this we monitor when an object is registered, logged in or logged out.
   Stream<AppUser?> get authStateChange =>
       _auth.authStateChanges().map(_toAppUser);
+
+  // Also emits when the user's data changes, like the display name edited in the profile
+  Stream<AppUser?> get userChanges => _auth.userChanges().map(_toAppUser);
 
   //Get the current user
   AppUser? get currentUser => _toAppUser(_auth.currentUser);

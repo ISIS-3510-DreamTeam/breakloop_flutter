@@ -1,12 +1,13 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Tipo de sesión disponible en la app
 enum SessionType { focus }
 
 // Estados posibles de la sesión
-enum SessionStatus { completed, abandoned }
+enum SessionStatus { active, paused, completed, abandoned }
 
-/// Modelo que representa una sesión de enfoque
+/// Model representing a focus session
 class FocusSessionModel {
   final String id;
   final String userId;
@@ -17,6 +18,14 @@ class FocusSessionModel {
   final int xpEarned;
   final bool isSynced;
 
+  // Information required for Focus Recovery
+  final String focusGoal;
+  final DateTime? pausedAt;
+  final int totalPausedSeconds;
+  final int elapsedSeconds;
+  final int remainingSeconds;
+  final DateTime? lastUpdatedAt;
+
   FocusSessionModel({
     required this.id,
     required this.userId,
@@ -26,33 +35,55 @@ class FocusSessionModel {
     required this.sessionStatus,
     required this.xpEarned,
     this.isSynced = false,
+    this.focusGoal = '',
+    this.pausedAt,
+    this.totalPausedSeconds = 0,
+    this.elapsedSeconds = 0,
+    this.remainingSeconds = 0,
+    this.lastUpdatedAt,
   });
 
-  /// Crea un FocusSessionModel desde datos almacenados localmente
+  // Converts stored dates into DateTime
+  static DateTime? _parseDate(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is int) {
+      return DateTime.fromMillisecondsSinceEpoch(value);
+    }
+    if (value is DateTime) return value;
+    return null;
+  }
+
+  /// Creates a model from locally stored data
   factory FocusSessionModel.fromMap(Map<String, dynamic> map) {
     return FocusSessionModel(
-      id: map['id'] as String? ?? map['id'] as String? ?? '',
+      id: map['id'] as String? ?? '',
       userId: map['userId'] as String? ?? '',
-      startTime: map['startTime'] is int
-          ? DateTime.fromMillisecondsSinceEpoch(map['startTime'] as int)
-          : map['startTime'] is Timestamp
-              ? (map['startTime'] as Timestamp).toDate()
-              : DateTime.now(),
+      startTime: _parseDate(map['startTime']) ?? DateTime.now(),
       duration: (map['duration'] as num?)?.toInt() ?? 0,
       sessionType: SessionType.values.firstWhere(
-        (e) => e.name.toUpperCase() == (map['type'] ?? map['sessionType']).toString().toUpperCase(),
+        (e) => e.name.toUpperCase() ==
+            (map['type'] ?? map['sessionType']).toString().toUpperCase(),
         orElse: () => SessionType.focus,
       ),
       sessionStatus: SessionStatus.values.firstWhere(
-        (e) => e.name.toUpperCase() == (map['status'] ?? map['sessionStatus']).toString().toUpperCase(),
+        (e) => e.name.toUpperCase() ==
+            (map['status'] ?? map['sessionStatus']).toString().toUpperCase(),
         orElse: () => SessionStatus.completed,
       ),
-      xpEarned: (map['xpEarned'] as num?)?.toInt() ?? (map['earnedXp'] as num?)?.toInt() ?? 0,
+      xpEarned: (map['xpEarned'] as num?)?.toInt() ??
+          (map['earnedXp'] as num?)?.toInt() ?? 0,
       isSynced: map['isSynced'] as bool? ?? false,
+      focusGoal: map['focusGoal'] as String? ?? '',
+      pausedAt: _parseDate(map['pausedAt']),
+      totalPausedSeconds:
+          (map['totalPausedSeconds'] as num?)?.toInt() ?? 0,
+      elapsedSeconds: (map['elapsedSeconds'] as num?)?.toInt() ?? 0,
+      remainingSeconds: (map['remainingSeconds'] as num?)?.toInt() ?? 0,
+      lastUpdatedAt: _parseDate(map['lastUpdatedAt']),
     );
   }
 
-  // Convierte el modelo a un Map para almacenamiento local
+  // Converts the model into a local Map
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -63,41 +94,46 @@ class FocusSessionModel {
       'status': sessionStatus.name.toUpperCase(),
       'xpEarned': xpEarned,
       'isSynced': isSynced,
+      'focusGoal': focusGoal,
+      'pausedAt': pausedAt?.millisecondsSinceEpoch,
+      'totalPausedSeconds': totalPausedSeconds,
+      'elapsedSeconds': elapsedSeconds,
+      'remainingSeconds': remainingSeconds,
+      'lastUpdatedAt': lastUpdatedAt?.millisecondsSinceEpoch,
     };
   }
 
-  // Crea un FocusSessionModel desde datos de Firestore
+  /// Creates a model from Firestore data
   factory FocusSessionModel.fromFirestore(
       Map<String, dynamic> data, String docId) {
-    DateTime parsedDate;
-
-    if (data['startTime'] is Timestamp) {
-      parsedDate = (data['startTime'] as Timestamp).toDate();
-    } else if (data['startTime'] is int) {
-      parsedDate = DateTime.fromMillisecondsSinceEpoch(data['startTime'] as int);
-    } else {
-      parsedDate = DateTime.now();
-    }
-
     return FocusSessionModel(
       id: docId,
       userId: data['userId'] as String? ?? '',
-      startTime: parsedDate,
+      startTime: _parseDate(data['startTime']) ?? DateTime.now(),
       duration: (data['duration'] as num?)?.toInt() ?? 0,
       sessionType: SessionType.values.firstWhere(
-        (e) => e.name.toUpperCase() == (data['type'] ?? '').toString().toUpperCase(),
+        (e) => e.name.toUpperCase() ==
+            (data['type'] ?? '').toString().toUpperCase(),
         orElse: () => SessionType.focus,
       ),
       sessionStatus: SessionStatus.values.firstWhere(
-        (e) => e.name.toUpperCase() == (data['status'] ?? '').toString().toUpperCase(),
+        (e) => e.name.toUpperCase() ==
+            (data['status'] ?? '').toString().toUpperCase(),
         orElse: () => SessionStatus.completed,
       ),
       xpEarned: (data['xpEarned'] as num?)?.toInt() ?? 0,
       isSynced: true,
+      focusGoal: data['focusGoal'] as String? ?? '',
+      pausedAt: _parseDate(data['pausedAt']),
+      totalPausedSeconds:
+          (data['totalPausedSeconds'] as num?)?.toInt() ?? 0,
+      elapsedSeconds: (data['elapsedSeconds'] as num?)?.toInt() ?? 0,
+      remainingSeconds: (data['remainingSeconds'] as num?)?.toInt() ?? 0,
+      lastUpdatedAt: _parseDate(data['lastUpdatedAt']),
     );
   }
 
-  // Convierte el modelo a un formato para enviar a Firestore
+  // Converts the model into a Firestore Map
   Map<String, dynamic> toFirestore() {
     return {
       'id': id,
@@ -107,10 +143,20 @@ class FocusSessionModel {
       'type': sessionType.name.toUpperCase(),
       'status': sessionStatus.name.toUpperCase(),
       'xpEarned': xpEarned,
+      'focusGoal': focusGoal,
+      'pausedAt': pausedAt == null
+          ? null
+          : Timestamp.fromDate(pausedAt!),
+      'totalPausedSeconds': totalPausedSeconds,
+      'elapsedSeconds': elapsedSeconds,
+      'remainingSeconds': remainingSeconds,
+      'lastUpdatedAt': lastUpdatedAt == null
+          ? null
+          : Timestamp.fromDate(lastUpdatedAt!),
     };
   }
 
-  // Crea una copia con los cambios seleccionados
+  // Creates a copy with selected changes
   FocusSessionModel copyWith({
     String? id,
     String? userId,
@@ -120,6 +166,14 @@ class FocusSessionModel {
     SessionStatus? sessionStatus,
     int? xpEarned,
     bool? isSynced,
+    String? focusGoal,
+    DateTime? pausedAt,
+    bool clearPausedAt = false,
+    int? totalPausedSeconds,
+    int? elapsedSeconds,
+    int? remainingSeconds,
+    DateTime? lastUpdatedAt,
+    bool clearLastUpdatedAt = false,
   }) {
     return FocusSessionModel(
       id: id ?? this.id,
@@ -130,6 +184,15 @@ class FocusSessionModel {
       sessionStatus: sessionStatus ?? this.sessionStatus,
       xpEarned: xpEarned ?? this.xpEarned,
       isSynced: isSynced ?? this.isSynced,
+      focusGoal: focusGoal ?? this.focusGoal,
+      pausedAt: clearPausedAt ? null : pausedAt ?? this.pausedAt,
+      totalPausedSeconds:
+          totalPausedSeconds ?? this.totalPausedSeconds,
+      elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
+      remainingSeconds: remainingSeconds ?? this.remainingSeconds,
+      lastUpdatedAt: clearLastUpdatedAt
+          ? null
+          : lastUpdatedAt ?? this.lastUpdatedAt,
     );
   }
 }

@@ -2,7 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../features/auth/data/auth_repository.dart';
+import '../../features/auth/model/app_user.dart';
 
+import '../../features/achievements/view/achievements_card.dart';
 import '../../features/goals/view/goal_progress_card.dart';
 import '../../features/pet/view/pet_card.dart';
 
@@ -17,12 +19,20 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = context.read<AuthRepository>().currentUser;
-    final String? email = currentUser?.email.toString();
-    final userName = email?.substring(0, email.indexOf('@')) ?? 'User';
+    final authRepository = context.read<AuthRepository>();
     return Scaffold(
       appBar: AppBar(
-        title: Text('Welcome Back, $userName'),
+        //Rebuilds when the user changes the name in the profile
+        title: StreamBuilder<AppUser?>(
+          stream: authRepository.userChanges,
+          initialData: authRepository.currentUser,
+          builder: (context, snapshot) {
+            final user = snapshot.data;
+            final String? email = user?.email;
+            final userName = user?.displayName ?? email?.substring(0, email.indexOf('@')) ?? 'User';
+            return Text('Welcome Back, $userName');
+          },
+        ),
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -32,7 +42,10 @@ class _HomePageState extends State<HomePage> {
             children: [
               GoalProgressCard(),
               const SizedBox(height: 50),
-              const PetCard()
+              const PetCard(),
+              const SizedBox(height: 50),
+              const AchievementsCard(),
+              const SizedBox(height: 24),
             ],
           )
         ),

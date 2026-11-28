@@ -5,6 +5,7 @@ import '../features/focus_session/data/focus_session_repository.dart';
 import '../features/pet/data/pet_repository.dart';
 import '../features/pet/data/pet_xp_source.dart';
 import '../features/pet/viewmodel/pet_viewmodel.dart';
+import '../features/profile/data/profile_repository.dart';
 import 'router.dart';
 
 import 'theme.dart';
@@ -24,6 +25,14 @@ import '../features/context_aware/viewmodel/avoided_screen_time_viewmodel.dart';
 import '../features/context_aware/viewmodel/active_activity_viewmodel.dart';
 import '../features/context_aware/data/activity_repository_impl.dart';
 import '../features/context_aware/data/activity_catalog_data_source.dart';
+import '../features/achievements/data/achievements_catalog_api.dart';
+import '../features/achievements/data/achievements_catalog_store.dart';
+import '../features/achievements/data/achievements_local_datasource.dart';
+import '../features/achievements/data/achievements_repository.dart';
+import '../features/achievements/data/achievements_remote_datasource.dart';
+import '../features/achievements/viewmodel/achievements_viewmodel.dart';
+
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -43,6 +52,30 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (ctx) => GoalsViewModel(ctx.read<GoalsRepository>(), ctx.read<ScreenTimeRepository>()),
         ),
+        Provider(
+          create: (_) => AchievementsCatalogApi(),
+          dispose: (_, api) => api.dispose(),
+        ),
+        Provider(create: (_) => AchievementsCatalogStore()),
+        Provider(create: (_) => AchievementsLocalDatasource()),
+        Provider(create: (_) => AchievementsRemoteDatasource()),
+        Provider(
+          create: (ctx) => AchievementsRepository(
+            api: ctx.read<AchievementsCatalogApi>(),
+            store: ctx.read<AchievementsCatalogStore>(),
+            local: ctx.read<AchievementsLocalDatasource>(),
+            remote: ctx.read<AchievementsRemoteDatasource>()
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (ctx) => AchievementsViewModel(
+            auth: ctx.read<AuthRepository>(),
+            achievements: ctx.read<AchievementsRepository>(),
+            goals: ctx.read<GoalsRepository>(),
+            screenTime: ctx.read<ScreenTimeRepository>(),
+            focus: FocusSessionRepository(),
+          ),
+        ),
         //Shared by the flagged apps screen and the card in Stats
         Provider(
           create: (ctx) => FlaggedAppsRepository(ctx.read<ScreenTimeRepository>()),
@@ -54,6 +87,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => ActiveActivityViewModel(ActivityLogRepositoryImpl(), ActivityRepositoryImpl(ActivityCatalogDataSource())),
         ),
+        //Shared by the profile screens, so the friend profiles cache outlives each screen
+        Provider(create: (_) => ProfileRepository()),
         ChangeNotifierProvider(
           create: (_) {
             final xp = PetXpSource(

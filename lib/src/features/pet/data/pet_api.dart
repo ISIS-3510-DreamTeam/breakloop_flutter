@@ -27,6 +27,13 @@ class PetApi {
     return [for (final e in list) PetDto.fromJson(e as Map<String, dynamic>)];
   }
 
+  // Pet saved in the server for the account: activePetId, petMood and petUpdatedAt
+  Future<Map<String, dynamic>> getPetState(String uid) async {
+    final res = await _client.get(_baseUrl.resolve('api/users/$uid/pet'));
+    _ensureSuccess(res);
+    return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+  }
+
   //Returns the raw response. The repository checks the code.
   Future<http.Response> updatePetState(String uid, PetStateRequest state) {
     return _client.put(
