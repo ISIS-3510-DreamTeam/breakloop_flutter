@@ -212,7 +212,8 @@ class ProfileViewModel extends ChangeNotifier {
     _repository.logFriendProfileLoad(
       viewerUid,
       source: source,
-      loadMs: stopwatch.elapsedMilliseconds,
+      // Microseconds, so a memory load is not truncated to 0 ms
+      loadMs: stopwatch.elapsedMicroseconds / 1000,
     );
   }
 

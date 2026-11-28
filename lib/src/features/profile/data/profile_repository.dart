@@ -97,7 +97,7 @@ class ProfileRepository {
   void logFriendProfileLoad(
     String viewerUid, {
     required ProfileLoadSource source,
-    required int loadMs,
+    required double loadMs,
   }) {
     _remoteDatasource
         .logProfileLoad(viewerUid, source: source, loadMs: loadMs)

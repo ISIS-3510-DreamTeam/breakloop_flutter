@@ -113,7 +113,7 @@ class ProfileRemoteDatasource {
   Future<void> logProfileLoad(
     String uid, {
     required ProfileLoadSource source,
-    required int loadMs,
+    required double loadMs,
   }) {
     return _firestore
         .collection('users')
