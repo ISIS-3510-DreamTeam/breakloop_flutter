@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../data/profile_repository.dart';
+import '../model/profile_load_source.dart';
 import '../model/profile_model.dart';
 import 'profile_ui_state.dart';
 
@@ -34,6 +35,10 @@ class ProfileViewModel extends ChangeNotifier {
 
   // The photo upload can end after the screen is closed
   bool _isDisposed = false;
+
+  // Measures how long a friend's profile takes to show (BQ20).
+  // It runs until Firestore answers, and is null once the network time was logged
+  Stopwatch? _loadStopwatch;
 
   // The repository comes from the app so its memory cache is shared by all screens
   ProfileViewModel(
@@ -132,17 +137,21 @@ class ProfileViewModel extends ChangeNotifier {
   }
 
   Future<void> _loadFriendProfile(String uid) async {
+    _loadStopwatch = Stopwatch()..start();
+
     // A fresh profile in memory is shown without the loading state.
     // Otherwise, show the last saved version (SQLite) while Firestore answers
     final cachedProfile = _repository.getCachedFriendProfile(uid);
     if (cachedProfile != null) {
       _state = _state.copyWith(profile: cachedProfile, isLoading: false);
+      _logLoad(ProfileLoadSource.memory);
     } else {
       final stored = await _repository.getStoredFriendProfile(uid);
       _state = _state.copyWith(
         profile: stored?.profile,
         lastUpdated: stored?.updatedAt,
       );
+      if (stored != null) _logLoad(ProfileLoadSource.disk);
     }
 
     // Without connection there is nothing else to wait for
@@ -152,6 +161,8 @@ class ProfileViewModel extends ChangeNotifier {
         isLoading: false,
         errorMessage: _offlineMessage(),
       );
+      // The network answer would include the time without connection, so it is not timed
+      _loadStopwatch = null;
     }
     notifyListeners();
 
@@ -172,6 +183,12 @@ class ProfileViewModel extends ChangeNotifier {
           isLoading: false,
         );
         notifyListeners();
+        // The first answer of each opening is always logged, so every load
+        // has a network time to compare with the memory or disk one
+        if (_loadStopwatch != null) {
+          _logLoad(ProfileLoadSource.network);
+          _loadStopwatch = null;
+        }
       },
       onError: (Object e) {
         debugPrint('[ProfileViewModel] watchProfile failed: $e');
@@ -183,6 +200,19 @@ class ProfileViewModel extends ChangeNotifier {
         );
         notifyListeners();
       },
+    );
+  }
+
+  // Logs how long it took since the screen was opened until the profile came from this source (BQ20)
+  void _logLoad(ProfileLoadSource source) {
+    final stopwatch = _loadStopwatch;
+    final viewerUid = _auth.currentUser?.uid;
+    if (stopwatch == null || viewerUid == null) return;
+
+    _repository.logFriendProfileLoad(
+      viewerUid,
+      source: source,
+      loadMs: stopwatch.elapsedMilliseconds,
     );
   }
 

@@ -1,8 +1,9 @@
-import 'dart:typed_data';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../core/network/network_checker.dart';
+import '../model/profile_load_source.dart';
 import '../model/profile_model.dart';
 import 'profile_local_datasource.dart';
 import 'profile_lru_cache.dart';
@@ -90,6 +91,19 @@ class ProfileRepository {
         await _localDatasource.saveFriendProfile(profile);
         return profile;
       });
+
+  // Records the load of a friend's profile for BQ20. It is not awaited: without
+  // connection Firestore keeps the event and sends it when the network returns
+  void logFriendProfileLoad(
+    String viewerUid, {
+    required ProfileLoadSource source,
+    required int loadMs,
+  }) {
+    _remoteDatasource
+        .logProfileLoad(viewerUid, source: source, loadMs: loadMs)
+        .catchError((Object e) =>
+            debugPrint('[ProfileRepository] logProfileLoad failed: $e'));
+  }
 
   // Saves the profiles of the friends that are not on the device yet,
   // so they can be opened later without connection

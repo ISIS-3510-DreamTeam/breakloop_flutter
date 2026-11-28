@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
+import '../model/profile_load_source.dart';
 import '../model/profile_model.dart';
 
 // Handles the communication with Firestore and Storage for profiles.
@@ -105,6 +106,24 @@ class ProfileRemoteDatasource {
         .doc(uid)
         .update({'photoUrl': photoUrl});
     return photoUrl;
+  }
+
+  // Saves how long a friend's profile took to show and where it came from (BQ20).
+  // The time is taken on the device, since an event made offline is sent later
+  Future<void> logProfileLoad(
+    String uid, {
+    required ProfileLoadSource source,
+    required int loadMs,
+  }) {
+    return _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('profileLoadEvents')
+        .add({
+      'source': source.name,
+      'loadMs': loadMs,
+      'timestamp': Timestamp.now(),
+    });
   }
 
   // Removes the photo from Storage and from the profile.
