@@ -18,8 +18,9 @@ class AppHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final goalsVm = context.watch<GoalsViewModel>();
-    final streak = goalsVm.goal.currentStreak;
+    // Only rebuilds when the streak value changes, not on every usage refresh
+    final streak = context.select<GoalsViewModel, int>((vm) => vm.goal.currentStreak);
+
 
     return Container(
       width: double.infinity,
