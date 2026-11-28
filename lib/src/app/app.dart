@@ -5,6 +5,7 @@ import '../features/focus_session/data/focus_session_repository.dart';
 import '../features/pet/data/pet_repository.dart';
 import '../features/pet/data/pet_xp_source.dart';
 import '../features/pet/viewmodel/pet_viewmodel.dart';
+import '../features/profile/data/profile_repository.dart';
 import 'router.dart';
 
 import 'theme.dart';
@@ -86,6 +87,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => ActiveActivityViewModel(ActivityLogRepositoryImpl(), ActivityRepositoryImpl(ActivityCatalogDataSource())),
         ),
+        //Shared by the profile screens, so the friend profiles cache outlives each screen
+        Provider(create: (_) => ProfileRepository()),
         ChangeNotifierProvider(
           create: (_) {
             final xp = PetXpSource(

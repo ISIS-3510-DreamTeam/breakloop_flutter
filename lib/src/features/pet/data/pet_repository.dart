@@ -66,8 +66,28 @@ class PetRepository {
     }
   }
 
+  // The pet on the device belongs to one account. When another account logs in,
+  // it is cleared and the worker downloads the pet of the new account
+  Future<void> useAccount(String uid) async {
+    if (await _localStore.getOwnerUid() == uid) return;
+    await _imageStorage.clear();
+    await _localStore.startForOwner(uid);
+    await PetSyncWorker.schedule();
+  }
+
   //called by petworker, which runs only when there is an internet connection
   Future<void> syncWithServer() async {
+    final user = await FirebaseAuth.instance.authStateChanges().first;
+    final uid = user?.uid;
+    // Never send or restore a pet saved for another account
+    if (uid == null || await _localStore.getOwnerUid() != uid) return;
+
+    // 0. Device without a pet (new account on this device): restore the one in the server
+    final saved = await _localStore.getState();
+    if (saved.currentPetId == null && saved.pendingPetId == null) {
+      await _restoreFromServer(uid);
+    }
+
     // 1. apply the pending pet change
     final pendingId = (await _localStore.getState()).pendingPetId;
     if (pendingId != null) {
@@ -79,10 +99,6 @@ class PetRepository {
     final state = await _localStore.getState();
     final petId = state.currentPetId;
     if (petId == null || state.synced) return;
-
-    final user = await FirebaseAuth.instance.authStateChanges().first;
-    final uid = user?.uid;
-    if (uid == null) return;
 
     final response = await _api.updatePetState(
       uid,
@@ -96,6 +112,21 @@ class PetRepository {
       throw StateError('Could not sync pet. HTTP ${response.statusCode}');
     }
     await _localStore.markSynced(state.updatedAt);
+  }
+
+  Future<void> _restoreFromServer(String uid) async {
+    final serverState = await _api.getPetState(uid);
+    final petId = serverState['activePetId'] as String?;
+    if (petId == null) return; // the account never chose a pet
+
+    await _downloadPet(petId);
+    // The account may have changed while downloading
+    if (await _localStore.getOwnerUid() != uid) return;
+    await _localStore.restorePet(
+      petId,
+      PetMood.fromApiName(serverState['petMood'] as String?),
+      (serverState['petUpdatedAt'] as num?)?.toInt() ?? 0,
+    );
   }
 
   Future<void> _downloadPet(String petId) async {
