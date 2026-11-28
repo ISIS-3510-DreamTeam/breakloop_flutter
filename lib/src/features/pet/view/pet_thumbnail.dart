@@ -46,6 +46,9 @@ class PetThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Decode the image at the size it is shown, not at its full resolution
+    final cacheSize = (size * MediaQuery.devicePixelRatioOf(context)).round();
+
     return Container(
       width: size,
       height: size,
@@ -63,6 +66,7 @@ class PetThumbnail extends StatelessWidget {
           return CachedNetworkImage(
             imageUrl: url,
             fit: BoxFit.contain,
+            memCacheWidth: cacheSize,
             // Pixel art, so it is scaled without blur
             filterQuality: FilterQuality.none,
             placeholder: (_, _) => _buildPaw(),
