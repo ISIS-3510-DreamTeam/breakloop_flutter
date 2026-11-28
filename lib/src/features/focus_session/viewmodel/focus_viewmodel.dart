@@ -31,6 +31,23 @@ class FocusViewModel extends ChangeNotifier {
   // Time when the current session started
   DateTime? _sessionStartTimestamp;
 
+    // Stores the current session being tracked
+  FocusSessionModel? _currentSession;
+
+  // Stores the last elapsed time persisted locally
+  int _lastPersistedElapsedSeconds = 0;
+
+  // Stores the session waiting for user recovery
+  FocusSessionModel? _recoverySession;
+
+  FocusSessionModel? get recoverySession => _recoverySession;
+
+
+  // Stores the session waiting for completion confirmation
+FocusSessionModel? _completionSession;
+
+FocusSessionModel? get completionSession => _completionSession;
+
   // StreamSubscription para el control de conectividad a internet
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   bool _isOffline = false;
@@ -46,7 +63,8 @@ class FocusViewModel extends ChangeNotifier {
   })  : _repository = repository ?? FocusSessionRepository(),
         _auth = auth ?? FirebaseAuth.instance,
         _soundscapeService = soundscapeService ?? SoundscapeService() {
-    _initConnectivityListener();
+   //INTERNET
+   _initConnectivityListener();
   }
 
   // Inicializa el detector de red
@@ -125,6 +143,7 @@ class FocusViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+//CACHE
   // Changes the selected soundscape and plays it immediately
   Future<void> selectSoundscape(Soundscape soundscape) async {
     _state = _state.copyWith(activeSoundscape: soundscape);
@@ -144,8 +163,9 @@ class FocusViewModel extends ChangeNotifier {
     await _soundscapeService.stopSound();
   }
 
+  
   // Starts a new focus session
-  void startFocusSession() {
+  Future<void> startFocusSession() async {
     final duration = _state.selectedDurationMinutes;
 
     // Check that the selected duration is valid
@@ -171,27 +191,52 @@ class FocusViewModel extends ChangeNotifier {
     // Cancel any previous timer
     _timer?.cancel();
 
-    // Create an ID and save the start time for this session
-    _currentSessionId =
-        DateTime.now().millisecondsSinceEpoch.toString();
-    _sessionStartTimestamp = DateTime.now();
+    // Create an ID and save the start time
+    final now = DateTime.now();
+
+    _currentSessionId = now.millisecondsSinceEpoch.toString();
+    _sessionStartTimestamp = now;
 
     final totalSeconds = duration * 60;
 
-    // Update the state when the session starts
+    // Create the session model
+    _currentSession = FocusSessionModel(
+      id: _currentSessionId!,
+      userId: currentUser.uid,
+      startTime: now,
+      duration: totalSeconds,
+      sessionType: SessionType.focus,
+      sessionStatus: SessionStatus.active,
+      xpEarned: 0,
+      focusGoal: _state.focusGoal,
+      elapsedSeconds: 0,
+      remainingSeconds: totalSeconds,
+      lastUpdatedAt: now,
+    );
+
+    // Reset persistence counter
+    _lastPersistedElapsedSeconds = 0;
+
+    // Save the active session locally
+    await _repository.saveSessionLocally(_currentSession!);
+
+    // Update the UI state
     _state = _state.copyWith(
       isTimerRunning: true,
       isTimerPaused: false,
+      isRecoveryPending: false,
       remainingSeconds: totalSeconds,
       elapsedSeconds: 0,
       errorMessage: null,
     );
+
     notifyListeners();
 
     _runTimerLoop();
   }
 
-  // ujpdates the timer every second
+
+  // Updates the timer every second
   void _runTimerLoop() {
     _timer?.cancel();
 
@@ -202,117 +247,412 @@ class FocusViewModel extends ChangeNotifier {
         if (_state.isTimerPaused) return;
 
         if (_state.remainingSeconds > 0) {
+          final newRemaining = _state.remainingSeconds - 1;
+          final newElapsed = _state.elapsedSeconds + 1;
+
           _state = _state.copyWith(
-            remainingSeconds: _state.remainingSeconds - 1,
-            elapsedSeconds: _state.elapsedSeconds + 1,
+            remainingSeconds: newRemaining,
+            elapsedSeconds: newElapsed,
           );
+
           notifyListeners();
-        } else {
+
+          // Persist progress every 5 seconds
+          if (newElapsed - _lastPersistedElapsedSeconds >= 5) {
+            _lastPersistedElapsedSeconds = newElapsed;
+            unawaited(_persistSessionProgress());
+          }
+
           // Finish the session when the timer reaches zero
-          _completeFocusSession();
+          if (newRemaining == 0) {
+            unawaited(_completeFocusSession());
+          }
         }
       },
     );
   }
 
-  // Pauses the current session and its sound
-  void pauseSession() {
-    if (!_state.isTimerRunning || _state.isTimerPaused) return;
+// Saves the current session progress locally
+Future<void> _persistSessionProgress() async {
+  final session = _currentSession;
 
-    _state = _state.copyWith(isTimerPaused: true);
-    notifyListeners();
+  if (session == null) return;
 
-    unawaited(_soundscapeService.pauseSound());
-  }
+  final now = DateTime.now();
 
-  // Resumes the current session and its sound
-  void resumeSession() {
-    if (!_state.isTimerRunning || !_state.isTimerPaused) return;
+  final updatedSession = session.copyWith(
+    elapsedSeconds: _state.elapsedSeconds,
+    remainingSeconds: _state.remainingSeconds,
+    lastUpdatedAt: now,
+    sessionStatus: _state.isTimerPaused
+        ? SessionStatus.paused
+        : SessionStatus.active,
+  );
 
-    _state = _state.copyWith(isTimerPaused: false);
-    notifyListeners();
+  _currentSession = updatedSession;
 
-    unawaited(_soundscapeService.resumeSound());
-  }
+  await _repository.saveSessionLocally(updatedSession);
+}
 
-  // Cancels the current session
-  void cancelSession() {
-    if (!_state.isTimerRunning) return;
 
-    _saveSessionToStorage(SessionStatus.abandoned);
-    unawaited(stopSoundscape());
-    _resetTimerState();
-  }
 
-  // Completes the current session
-  void _completeFocusSession() {
-    _saveSessionToStorage(SessionStatus.completed);
-    unawaited(stopSoundscape());
-    _resetTimerState();
-  }
+// Restores a session saved locally
+Future<void> restoreActiveSession() async {
+  if (_state.isTimerRunning || _state.isRecoveryPending) return;
+  final user = _auth.currentUser;
 
-  // Saves the session locally and tries to sync it with Firestore
-  Future<void> _saveSessionToStorage(SessionStatus status) async {
-    final sessionId = _currentSessionId;
-    final startTime = _sessionStartTimestamp;
-    final userId = _auth.currentUser?.uid;
+  if (user == null) return;
 
-    // Check that the required session information exists
-    if (sessionId == null || startTime == null || userId == null) {
-      _state = _state.copyWith(
-        errorMessage: 'Error al registrar la sesión',
-      );
-      notifyListeners();
-      return;
+  // Find an active or paused session
+  final session = await _repository.getRecoverableSession(user.uid);
+
+  if (session == null) return;
+
+  final now = DateTime.now();
+
+  int elapsed = session.elapsedSeconds;
+
+  // Count the time passed outside the app only if the session was active
+  if (session.sessionStatus == SessionStatus.active) {
+    final lastUpdate = session.lastUpdatedAt ?? session.startTime;
+
+    final secondsAway = now.difference(lastUpdate).inSeconds;
+
+    if (secondsAway > 0) {
+      elapsed += secondsAway;
     }
-    
-    // 5 si se completa, 2 si se abandona (sale)
-    final int earnedXp = (status == SessionStatus.completed) ? 5 : 2;
+  }
 
-    // Create the session model
-    final newSession = FocusSessionModel(
-      id: sessionId,
-      userId: userId,
-      startTime: startTime, 
-      duration: _state.selectedDurationMinutes * 60, 
-      sessionType: SessionType.focus, 
-      sessionStatus: status,
-      xpEarned: earnedXp, // Asignamos los puntos fijos según la regla
+  // Do not exceed the original session duration
+  if (elapsed > session.duration) {
+    elapsed = session.duration;
+  }
+
+  final remaining = session.duration - elapsed;
+
+  // If the session expired, complete it automatically
+  if (remaining <= 0) {
+    final completedSession = session.copyWith(
+      sessionStatus: SessionStatus.completed,
+      elapsedSeconds: session.duration,
+      remainingSeconds: 0,
+      xpEarned: 5,
+      lastUpdatedAt: now,
+      clearPausedAt: true,
       isSynced: false,
     );
-    try {
-      // Save the session locally
-      await _repository.saveSessionLocally(newSession);
 
-      // Start cloud synchronization
-      _state = _state.copyWith(isSyncing: true);
-      notifyListeners();
+    await _repository.saveSessionLocally(completedSession);
 
-      await _repository.syncUnsyncedSessions();
-    } catch (e) {
-      _state = _state.copyWith(
-        errorMessage: 'No se pudo sincronizar con Firestore',
-      );
-    } finally {
-      // Finish the synchronization state
-      _state = _state.copyWith(isSyncing: false);
-      notifyListeners();
-    }
+   unawaited(_syncPendingSessions());
+
+    return;
   }
 
-  // resets the timer and current session information
+    // Update the recovered session
+    final recoveredSession = session.copyWith(
+      elapsedSeconds: elapsed,
+      remainingSeconds: remaining,
+      lastUpdatedAt: now,
+    );
+
+    await _repository.saveSessionLocally(recoveredSession);
+
+    // Keep the session available for the recovery screen
+    _recoverySession = recoveredSession;
+
+    _state = _state.copyWith(
+      isRecoveryPending: true,
+      elapsedSeconds: elapsed,
+      remainingSeconds: remaining,
+    );
+
+    notifyListeners();
+  }
+
+
+
+  // Continues a recovered focus session
+Future<void> continueRecoveredSession() async {
+  final session = _recoverySession;
+
+  if (session == null) return;
+
+  final now = DateTime.now();
+
+  // Calculate paused time if the session was paused
+  int additionalPausedSeconds = 0;
+
+  if (session.sessionStatus == SessionStatus.paused &&
+      session.pausedAt != null) {
+    additionalPausedSeconds =
+        now.difference(session.pausedAt!).inSeconds;
+  }
+
+  // Restore the session as the current session
+  _currentSession = session.copyWith(
+    sessionStatus: SessionStatus.active,
+    totalPausedSeconds:
+        session.totalPausedSeconds + additionalPausedSeconds,
+    clearPausedAt: true,
+    lastUpdatedAt: now,
+  );
+
+  _currentSessionId = session.id;
+  _sessionStartTimestamp = session.startTime;
+  _lastPersistedElapsedSeconds = session.elapsedSeconds;
+
+  await _repository.saveSessionLocally(_currentSession!);
+
+  // Clear recovery information
+  _recoverySession = null;
+
+  // Restart the timer with the recovered progress
+  _state = _state.copyWith(
+    isRecoveryPending: false,
+    isTimerRunning: true,
+    isTimerPaused: false,
+    elapsedSeconds: session.elapsedSeconds,
+    remainingSeconds: session.remainingSeconds,
+    errorMessage: null,
+  );
+
+  notifyListeners();
+
+  _runTimerLoop();
+
+  await _soundscapeService.resumeSound();
+}
+
+  // Pauses the current session and its sound
+
+Future<void> pauseSession() async {
+  if (!_state.isTimerRunning || _state.isTimerPaused) return;
+
+  final now = DateTime.now();
+
+  // Update the UI state
+  _state = _state.copyWith(isTimerPaused: true);
+  notifyListeners();
+
+  // Update the current session
+  if (_currentSession != null) {
+    _currentSession = _currentSession!.copyWith(
+      sessionStatus: SessionStatus.paused,
+      elapsedSeconds: _state.elapsedSeconds,
+      remainingSeconds: _state.remainingSeconds,
+      pausedAt: now,
+      lastUpdatedAt: now,
+    );
+
+    // Save the paused session locally
+    await _repository.saveSessionLocally(_currentSession!);
+  }
+
+  await _soundscapeService.pauseSound();
+}
+  // Resumes the current session and its sound
+ // Resumes the current session and its sound
+Future<void> resumeSession() async {
+  if (!_state.isTimerRunning || !_state.isTimerPaused) return;
+
+  final now = DateTime.now();
+
+  if (_currentSession != null) {
+    // Calculate how long the session was paused
+    final pausedDuration = _currentSession!.pausedAt != null
+        ? now.difference(_currentSession!.pausedAt!).inSeconds
+        : 0;
+
+    _currentSession = _currentSession!.copyWith(
+      sessionStatus: SessionStatus.active,
+      totalPausedSeconds:
+          _currentSession!.totalPausedSeconds + pausedDuration,
+      clearPausedAt: true,
+      lastUpdatedAt: now,
+    );
+
+    // Save the resumed session locally
+    await _repository.saveSessionLocally(_currentSession!);
+  }
+
+  _state = _state.copyWith(isTimerPaused: false);
+  notifyListeners();
+
+  await _soundscapeService.resumeSound();
+}
+
+
+
+  // Restarts a recovered session as a new session
+Future<void> restartRecoveredSession() async {
+  if (_recoverySession == null) return;
+
+  // Use the recovered session as the current session
+  _currentSession = _recoverySession;
+
+  _state = _state.copyWith(
+    elapsedSeconds: _recoverySession!.elapsedSeconds,
+    remainingSeconds: _recoverySession!.remainingSeconds,
+  );
+
+  // Mark the previous session as abandoned
+  await _saveSessionToStorage(SessionStatus.abandoned);
+
+  // Clear the recovery information
+  _recoverySession = null;
+
+  _resetTimerState();
+
+  // Start a completely new session
+  await startFocusSession();
+}
+
+
+  // Finishes a recovered session without completing the timer
+Future<void> finishRecoveredSession() async {
+  final session = _recoverySession;
+
+  if (session == null) return;
+
+  // Restore the recovered session as the current session
+  _currentSession = session;
+
+  _state = _state.copyWith(
+    elapsedSeconds: session.elapsedSeconds,
+    remainingSeconds: session.remainingSeconds,
+  );
+
+  // Mark the session as abandoned (2 XP)
+  await _saveSessionToStorage(SessionStatus.abandoned);
+
+  _recoverySession = null;
+
+  _resetTimerState();
+}
+
+
+  // Cancels the current session
+  Future<void> cancelSession() async {
+    if (!_state.isTimerRunning) return;
+
+    await _saveSessionToStorage(SessionStatus.abandoned);
+    await stopSoundscape();
+    _resetTimerState();
+  }
+
+ 
+// Completes the session when the timer reaches zero
+Future<void> _completeFocusSession() async {
+  await _saveSessionToStorage(SessionStatus.completed);
+
+  // Keep the completed session information for the celebration dialog
+  _completionSession = _currentSession;
+
+  // Stop the timer
+  _timer?.cancel();
+  _timer = null;
+
+  // Show the completion dialog immediately
+  _state = _state.copyWith(
+    isTimerRunning: false,
+    isTimerPaused: false,
+    isCompletionPending: true,
+    remainingSeconds: 0,
+  );
+
+  notifyListeners();
+
+  // Stop the soundscape independently
+  await stopSoundscape();
+}
+
+  // Closes the completion dialog and returns to the Focus setup screen
+  void dismissCompletionDialog() {
+    if (!_state.isCompletionPending) return;
+
+    _resetTimerState();
+  }
+
+
+// Saves the session locally and starts cloud synchronization
+Future<void> _saveSessionToStorage(SessionStatus status) async {
+  final session = _currentSession;
+
+  if (session == null) {
+    _state = _state.copyWith(
+      errorMessage: 'Error al registrar la sesión',
+    );
+    notifyListeners();
+    return;
+  }
+
+  // 5 XP if completed, 2 XP if abandoned
+  final int earnedXp =
+      (status == SessionStatus.completed) ? 5 : 2;
+
+  final finalSession = session.copyWith(
+    sessionStatus: status,
+    xpEarned: earnedXp,
+    elapsedSeconds: _state.elapsedSeconds,
+    remainingSeconds: _state.remainingSeconds,
+    lastUpdatedAt: DateTime.now(),
+    clearPausedAt: true,
+    isSynced: false,
+  );
+
+  _currentSession = finalSession;
+
+  try {
+    // Save locally first, without depending on internet
+    await _repository.saveSessionLocally(finalSession);
+
+    // Start cloud synchronization in the background
+    unawaited(_syncPendingSessions());
+  } catch (e) {
+    _state = _state.copyWith(
+      errorMessage: 'No se pudo guardar la sesión localmente',
+    );
+    notifyListeners();
+  }
+}
+
+// Synchronizes pending sessions with Firestore
+Future<void> _syncPendingSessions() async {
+  _state = _state.copyWith(isSyncing: true);
+  notifyListeners();
+
+  try {
+    await _repository.syncUnsyncedSessions();
+  } catch (e) {
+    debugPrint('Could not sync sessions: $e');
+  } finally {
+    _state = _state.copyWith(isSyncing: false);
+    notifyListeners();
+  }
+}
+
+  // Resets the timer and current session information
   void _resetTimerState() {
     _timer?.cancel();
     _timer = null;
+
     _currentSessionId = null;
     _sessionStartTimestamp = null;
+    _currentSession = null;
+    _lastPersistedElapsedSeconds = 0;
+    _recoverySession = null;
+    _completionSession = null;
 
     _state = _state.copyWith(
       isTimerRunning: false,
       isTimerPaused: false,
       remainingSeconds: 0,
       elapsedSeconds: 0,
+      isRecoveryPending: false,
+      isCompletionPending: false,
     );
+
     notifyListeners();
   }
 
