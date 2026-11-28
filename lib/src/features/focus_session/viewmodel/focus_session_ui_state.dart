@@ -41,6 +41,9 @@ class FocusSessionUiState {
   // Stores an error message if something goes wrong
   final String? errorMessage;
 
+
+  final bool isCompletionPending;
+
   const FocusSessionUiState({
     this.selectedDurationMinutes = 25,
     this.customDurationMinutes = 25,
@@ -55,6 +58,7 @@ class FocusSessionUiState {
     this.isSyncing = false,
     this.isRecoveryPending = false,
     this.errorMessage,
+    this.isCompletionPending = false,
   });
 
   // Creates a new state while keeping the values that were not changed
@@ -72,6 +76,7 @@ class FocusSessionUiState {
     bool? isSyncing,
     bool? isRecoveryPending,
     String? errorMessage,
+    bool? isCompletionPending,
   }) {
     return FocusSessionUiState(
       selectedDurationMinutes:
@@ -99,6 +104,8 @@ class FocusSessionUiState {
       isRecoveryPending:
           isRecoveryPending ?? this.isRecoveryPending,
       errorMessage: errorMessage,
+      isCompletionPending:
+    isCompletionPending ?? this.isCompletionPending,
     );
   }
 }

@@ -7,6 +7,7 @@ import 'app_header.dart';
 import '../../features/context_aware/view/active_activity_banner.dart';
 import 'package:breakloop_flutter/src/features/focus_session/viewmodel/focus_viewmodel.dart';
 import '../../features/focus_session/view/focus_recovery_dialog.dart';
+import '../../features/focus_session/view/focus_completion_dialog.dart';
 
 class MainShell extends StatefulWidget {
   final StatefulNavigationShell navigationShell;
@@ -80,6 +81,9 @@ Widget build(BuildContext context) {
     builder: (context, _) {
       final isRecoveryPending =
           widget.focusViewModel.state.isRecoveryPending;
+      
+      final isCompletionPending =
+          widget.focusViewModel.state.isCompletionPending;
     
     
 
@@ -142,7 +146,7 @@ Widget build(BuildContext context) {
             ),
           ),
 
-          // Recovery overlay
+           // Recovery overlay
           if (isRecoveryPending) ...[
             const Positioned.fill(
               child: ModalBarrier(
@@ -158,8 +162,32 @@ Widget build(BuildContext context) {
                   child: FocusRecoveryDialog(
                     viewModel: widget.focusViewModel,
                     onRecoveryResolved: () {
-                          widget.navigationShell.goBranch(1);
-  },
+                      widget.navigationShell.goBranch(1);
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ],
+
+          // Completion overlay
+          if (isCompletionPending) ...[
+            const Positioned.fill(
+              child: ModalBarrier(
+                dismissible: false,
+                color: Colors.black54,
+              ),
+            ),
+
+            Positioned.fill(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: FocusCompletionDialog(
+                    viewModel: widget.focusViewModel,
+                    onContinue: () {
+                      widget.navigationShell.goBranch(1);
+                    },
                   ),
                 ),
               ),
@@ -169,4 +197,5 @@ Widget build(BuildContext context) {
       );
     },
   );
-}}
+}
+}

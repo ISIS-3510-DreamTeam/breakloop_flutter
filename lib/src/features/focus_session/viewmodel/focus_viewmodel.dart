@@ -42,6 +42,12 @@ class FocusViewModel extends ChangeNotifier {
 
   FocusSessionModel? get recoverySession => _recoverySession;
 
+
+  // Stores the session waiting for completion confirmation
+FocusSessionModel? _completionSession;
+
+FocusSessionModel? get completionSession => _completionSession;
+
   // StreamSubscription para el control de conectividad a internet
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   bool _isOffline = false;
@@ -539,13 +545,37 @@ Future<void> finishRecoveredSession() async {
     _resetTimerState();
   }
 
-    // Completes the current session
-    Future<void> _completeFocusSession() async {
-      await _saveSessionToStorage(SessionStatus.completed);
-      await stopSoundscape();
-      _resetTimerState();
+  // Completes the session when the timer reaches zero
+  Future<void> _completeFocusSession() async {
+    await _saveSessionToStorage(SessionStatus.completed);
 
-    }
+    // Keep the completed session information for the celebration dialog
+    _completionSession = _currentSession;
+
+    await stopSoundscape();
+
+    // Stop the timer without deleting the completed session information
+    _timer?.cancel();
+    _timer = null;
+
+    _state = _state.copyWith(
+      isTimerRunning: false,
+      isTimerPaused: false,
+      isCompletionPending: true,
+      remainingSeconds: 0,
+    );
+
+    notifyListeners();
+  }
+
+
+  // Closes the completion dialog and returns to the Focus setup screen
+  void dismissCompletionDialog() {
+    if (!_state.isCompletionPending) return;
+
+    _resetTimerState();
+  }
+
     // Saves the session locally and tries to sync it with Firestore
   Future<void> _saveSessionToStorage(SessionStatus status) async {
     final session = _currentSession;
@@ -604,6 +634,7 @@ Future<void> finishRecoveredSession() async {
     _currentSession = null;
     _lastPersistedElapsedSeconds = 0;
     _recoverySession = null;
+    _completionSession = null;
 
     _state = _state.copyWith(
       isTimerRunning: false,
@@ -611,6 +642,7 @@ Future<void> finishRecoveredSession() async {
       remainingSeconds: 0,
       elapsedSeconds: 0,
       isRecoveryPending: false,
+      isCompletionPending: false,
     );
 
     notifyListeners();
